@@ -57,6 +57,7 @@ def main():
                 "-v",
                 "tests/test_app.py",
                 "tests/test_api.py",
+                "tests/test_gateway.py",
                 "tests/test_ssh.py",
             ],
             coverage_env,

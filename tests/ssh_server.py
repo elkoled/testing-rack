@@ -124,16 +124,18 @@ async def handle(
     identity = None
     if virtual_device_port is not None:
         try:
-            identity = await virtual_identity(target["serial"], virtual_device_port)
+            identity = await virtual_identity(
+                target["device_serial"], virtual_device_port
+            )
         except (OSError, TimeoutError, json.JSONDecodeError):
             process.stderr.write(
                 f"DEVICE UNAVAILABLE: {target['name']} did not answer. Your reservation remains active.\n"
             )
             process.exit(4)
             return
-        if identity.get("serial") != target["serial"]:
+        if identity.get("serial") != target["device_serial"]:
             process.stderr.write(
-                f"IDENTITY MISMATCH: expected {target['serial']}; refusing access.\n"
+                f"IDENTITY MISMATCH: expected {target['device_serial']}; refusing access.\n"
             )
             process.exit(5)
             return

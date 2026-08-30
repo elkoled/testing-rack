@@ -88,7 +88,7 @@ def main():
                     "IdentitiesOnly=yes",
                     "-o",
                     "ClearAllForwardings=yes",
-                    f"comma@{target['serial']}",
+                    f"comma@comma-{target['device_serial']}",
                 ]
             ).returncode
         )

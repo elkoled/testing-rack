@@ -22,7 +22,7 @@ from urllib.parse import urlparse
 
 
 NAME_RE = re.compile(r"NUT([0-9]+)$")
-SERIAL_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9_-]{3,63}$")
+DEVICE_SERIAL_RE = re.compile(r"[A-Za-z0-9]{16}$")
 IDEMPOTENCY_RE = re.compile(r"[A-Za-z0-9_-]{16,128}$")
 BASE58 = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
 CAPABILITY_RE = re.compile(
@@ -88,24 +88,24 @@ class Config:
             raise ValueError("lease limits must use supported durations")
         if not isinstance(raw["devices"], list) or not raw["devices"]:
             raise ValueError("devices must be a non-empty list")
-        names, serials, devices = set(), set(), []
+        names, device_serials, devices = set(), set(), []
         for item in raw["devices"]:
             if not isinstance(item, dict) or set(item) != {
                 "name",
                 "model",
-                "serial",
+                "device_serial",
             }:
-                raise ValueError("every device needs name, model, and serial")
+                raise ValueError("every device needs name, model, and device_serial")
             if not NAME_RE.fullmatch(item["name"]):
                 raise ValueError(f"invalid device name: {item['name']!r}")
             for key in item:
                 if not isinstance(item[key], str) or not item[key].strip():
                     raise ValueError(f"{item['name']} has an invalid {key}")
-            if not SERIAL_RE.fullmatch(item["serial"]):
-                raise ValueError(f"{item['name']} has an invalid serial")
+            if not DEVICE_SERIAL_RE.fullmatch(item["device_serial"]):
+                raise ValueError(f"{item['name']} has an invalid device serial")
             for value, seen, label in (
                 (item["name"], names, "name"),
-                (item["serial"], serials, "serial"),
+                (item["device_serial"], device_serials, "device serial"),
             ):
                 if value in seen:
                     raise ValueError(f"duplicate {label}: {value}")
@@ -364,7 +364,7 @@ class StateStore:
         meta = self.state["metadata"].get(name, {})
         return {
             **device,
-            "serial": configured["serial"],
+            "device_serial": configured["device_serial"],
             "metadata": meta,
         }
 
@@ -537,7 +537,7 @@ class StateStore:
             device = next(d for d in self.config.devices if d["name"] == name)
             return {
                 "name": name,
-                "serial": device["serial"],
+                "device_serial": device["device_serial"],
                 "health": self._effective_health(name),
             }
 
