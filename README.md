@@ -1,11 +1,10 @@
 # testing-rack
 
-Small reservation server and restricted SSH gateway for a shared hardware test
-rack. Configure devices in `config.json`; no rack hardware is touched by tests.
+Reserve and access devices on a shared test rack.
 
 ```sh
-python3 testing_rack.py init
-python3 testing_rack.py serve
+python3 app.py init
+python3 app.py serve
 ```
 
 Open <http://127.0.0.1:8765>. Run the complete lifecycle suite with:
@@ -14,4 +13,4 @@ Open <http://127.0.0.1:8765>. Run the complete lifecycle suite with:
 ./tests.sh
 ```
 
-Production systemd and restricted-SSH examples are in `deploy/`.
+Production examples are in `deploy/`. Test details are in `TESTING.md`.

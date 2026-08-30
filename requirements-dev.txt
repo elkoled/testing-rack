@@ -1,3 +1,5 @@
 playwright==1.62.0
 hypothesis==6.138.15
 coverage==7.10.6
+asyncssh==2.21.1
+ruff==0.12.9
