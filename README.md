@@ -2,6 +2,8 @@
 
 Reserve and access devices on a shared test rack.
 
+Requires Python 3.12 and `uv`.
+
 ```sh
 python3 app.py init
 python3 app.py serve

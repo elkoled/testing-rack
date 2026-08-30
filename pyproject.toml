@@ -1,0 +1,17 @@
+[project]
+name = "testing-rack"
+version = "0.1.0"
+requires-python = ">=3.12,<3.13"
+dependencies = []
+
+[dependency-groups]
+dev = [
+  "asyncssh==2.21.1",
+  "coverage==7.10.6",
+  "hypothesis==6.138.15",
+  "playwright==1.62.0",
+  "ruff==0.12.9",
+]
+
+[tool.uv]
+package = false
