@@ -17,7 +17,7 @@ def wait_port(port):
     deadline = time.monotonic() + 5
     while time.monotonic() < deadline:
         try:
-            with socket.create_connection(("127.0.0.1", port), timeout=0.1):
+            with socket.create_connection(("localhost", port), timeout=0.1):
                 return
         except OSError:
             time.sleep(0.02)
@@ -78,7 +78,7 @@ class HttpApiTest(unittest.TestCase):
         cls.tmp.cleanup()
 
     def request(self, method, path, body=None, headers=None):
-        connection = http.client.HTTPConnection("127.0.0.1", 8876, timeout=3)
+        connection = http.client.HTTPConnection("localhost", 8876, timeout=3)
         connection.request(method, path, body=body, headers=headers or {})
         response = connection.getresponse()
         data = response.read()

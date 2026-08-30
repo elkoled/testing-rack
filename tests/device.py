@@ -9,21 +9,23 @@ import json
 
 
 async def handle(
-    name: str, reader: asyncio.StreamReader, writer: asyncio.StreamWriter
+    available: set[str], reader: asyncio.StreamReader, writer: asyncio.StreamWriter
 ) -> None:
     try:
         request = await asyncio.wait_for(reader.readline(), 2)
         command = request.decode(errors="replace").strip()
-        if command == "identity":
+        parts = command.split()
+        serial = parts[1] if len(parts) == 2 and parts[0] == "identity" else ""
+        if serial in available:
             response = {
-                "device": name,
+                "device": serial,
                 "hardware": "comma 4",
-                "serial": name,
+                "serial": serial,
                 "state": "offroad",
                 "virtual": True,
             }
         else:
-            response = {"device": name, "error": "unsupported command"}
+            response = {"serial": serial, "error": "device unavailable"}
         writer.write((json.dumps(response, separators=(",", ":")) + "\n").encode())
         await writer.drain()
     finally:
@@ -32,16 +34,13 @@ async def handle(
 
 
 async def run(count: int, port: int) -> None:
-    servers = []
-    for index in range(1, count + 1):
-        name, host = f"NUT{index:03d}", f"127.77.0.{index}"
-        servers.append(
-            await asyncio.start_server(lambda r, w, n=name: handle(n, r, w), host, port)
-        )
-    print(
-        f"{count} virtual comma 4 devices listening on 127.77.0.1-{count}:{port}",
-        flush=True,
+    available = {f"NUT{index:03d}" for index in range(1, count + 1) if index != 2}
+    await asyncio.start_server(
+        lambda reader, writer: handle(available, reader, writer),
+        "localhost",
+        port,
     )
+    print(f"{len(available)} virtual comma 4 serials ready", flush=True)
     await asyncio.Future()
 
 

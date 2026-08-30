@@ -13,7 +13,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 
 
-def wait_port(port: int, host: str = "127.0.0.1") -> None:
+def wait_port(port: int, host: str = "localhost") -> None:
     deadline = time.monotonic() + 10
     while time.monotonic() < deadline:
         try:
@@ -37,7 +37,7 @@ class VirtualRackIntegrationTest(unittest.TestCase):
         self.config.write_text(
             json.dumps(
                 {
-                    "gateway_host": "127.0.0.1",
+                    "gateway_host": "localhost",
                     "gateway_port": 23022,
                     "default_lease_minutes": 60,
                     "max_lease_minutes": 1440,
@@ -45,22 +45,19 @@ class VirtualRackIntegrationTest(unittest.TestCase):
                     "devices": [
                         {
                             "name": "NUT001",
-                            "host": "127.77.0.1",
                             "model": "comma 4",
-                            "expected_ftdi_serial": "NUT001",
+                            "serial": "NUT001",
                         },
                         # Deliberately absent: verifies graceful device-unavailable behavior.
                         {
                             "name": "NUT002",
-                            "host": "127.77.0.99",
                             "model": "comma 4",
-                            "expected_ftdi_serial": "NUT002",
+                            "serial": "NUT002",
                         },
                         {
                             "name": "NUT003",
-                            "host": "127.77.0.3",
                             "model": "comma 4",
-                            "expected_ftdi_serial": "NUT003",
+                            "serial": "NUT003",
                         },
                     ],
                 }
@@ -126,7 +123,7 @@ class VirtualRackIntegrationTest(unittest.TestCase):
                 stderr=subprocess.DEVNULL,
             ),
         ]
-        wait_port(23000, "127.77.0.1")
+        wait_port(23000, "localhost")
         wait_port(8875)
         self.processes.append(
             subprocess.Popen(
@@ -134,13 +131,13 @@ class VirtualRackIntegrationTest(unittest.TestCase):
                     str(ROOT / ".venv/bin/python"),
                     str(ROOT / "tests/ssh_server.py"),
                     "--bind",
-                    "127.0.0.1",
+                    "localhost",
                     "--port",
                     "23022",
                     "--host-key",
                     str(self.host_key),
                     "--service",
-                    "http://127.0.0.1:8875",
+                    "http://localhost:8875",
                     "--virtual-device-port",
                     "23000",
                 ],
@@ -169,7 +166,7 @@ class VirtualRackIntegrationTest(unittest.TestCase):
             headers["X-Testing-Rack-Capability"] = capability
         with urllib.request.urlopen(
             urllib.request.Request(
-                "http://127.0.0.1:8875" + path,
+                "http://localhost:8875" + path,
                 data=data,
                 headers=headers,
                 method=method,
@@ -187,7 +184,7 @@ class VirtualRackIntegrationTest(unittest.TestCase):
                 "StrictHostKeyChecking=no",
                 "-o",
                 "UserKnownHostsFile=/dev/null",
-                "rack@127.0.0.1",
+                "rack@localhost",
                 argument,
             ],
             capture_output=True,

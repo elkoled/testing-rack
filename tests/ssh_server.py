@@ -63,12 +63,17 @@ def resolve(services: list[str], capability: str, device: str):
     return None, "ACCESS DENIED: reservation is unknown, released, or expired."
 
 
-async def virtual_identity(host: str, port: int) -> dict:
-    reader, writer = await asyncio.wait_for(asyncio.open_connection(host, port), 2)
+async def virtual_identity(serial: str, port: int) -> dict:
+    reader, writer = await asyncio.wait_for(
+        asyncio.open_connection("localhost", port), 2
+    )
     try:
-        writer.write(b"identity\n")
+        writer.write(f"identity {serial}\n".encode())
         await writer.drain()
-        return json.loads(await asyncio.wait_for(reader.readline(), 2))
+        identity = json.loads(await asyncio.wait_for(reader.readline(), 2))
+        if "error" in identity:
+            raise OSError(identity["error"])
+        return identity
     finally:
         writer.close()
         await writer.wait_closed()
@@ -119,16 +124,16 @@ async def handle(
     identity = None
     if virtual_device_port is not None:
         try:
-            identity = await virtual_identity(target["host"], virtual_device_port)
+            identity = await virtual_identity(target["serial"], virtual_device_port)
         except (OSError, TimeoutError, json.JSONDecodeError):
             process.stderr.write(
                 f"DEVICE UNAVAILABLE: {target['name']} did not answer. Your reservation remains active.\n"
             )
             process.exit(4)
             return
-        if identity.get("serial") != target["name"]:
+        if identity.get("serial") != target["serial"]:
             process.stderr.write(
-                f"IDENTITY MISMATCH: expected {target['name']}; refusing access.\n"
+                f"IDENTITY MISMATCH: expected {target['serial']}; refusing access.\n"
             )
             process.exit(5)
             return
@@ -171,14 +176,14 @@ async def run(args) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--bind", default="0.0.0.0")
+    parser.add_argument("--bind", default="localhost")
     parser.add_argument("--port", type=int, default=22022)
     parser.add_argument("--host-key", type=Path, required=True)
     parser.add_argument("--service", action="append", default=[])
     parser.add_argument("--virtual-device-port", type=int)
     args = parser.parse_args()
     if not args.service:
-        args.service = ["http://127.0.0.1:8765"]
+        args.service = ["http://localhost:8765"]
     asyncio.run(run(args))
 
 

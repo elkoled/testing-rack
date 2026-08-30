@@ -22,6 +22,7 @@ from urllib.parse import urlparse
 
 
 NAME_RE = re.compile(r"NUT([0-9]+)$")
+SERIAL_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9_-]{3,63}$")
 IDEMPOTENCY_RE = re.compile(r"[A-Za-z0-9_-]{16,128}$")
 BASE58 = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
 CAPABILITY_RE = re.compile(
@@ -87,26 +88,24 @@ class Config:
             raise ValueError("lease limits must use supported durations")
         if not isinstance(raw["devices"], list) or not raw["devices"]:
             raise ValueError("devices must be a non-empty list")
-        names, hosts, ftdis, devices = set(), set(), set(), []
+        names, serials, devices = set(), set(), []
         for item in raw["devices"]:
             if not isinstance(item, dict) or set(item) != {
                 "name",
-                "host",
                 "model",
-                "expected_ftdi_serial",
+                "serial",
             }:
-                raise ValueError(
-                    "every device needs name, host, model, and expected_ftdi_serial"
-                )
+                raise ValueError("every device needs name, model, and serial")
             if not NAME_RE.fullmatch(item["name"]):
                 raise ValueError(f"invalid device name: {item['name']!r}")
             for key in item:
                 if not isinstance(item[key], str) or not item[key].strip():
                     raise ValueError(f"{item['name']} has an invalid {key}")
+            if not SERIAL_RE.fullmatch(item["serial"]):
+                raise ValueError(f"{item['name']} has an invalid serial")
             for value, seen, label in (
                 (item["name"], names, "name"),
-                (item["host"], hosts, "host"),
-                (item["expected_ftdi_serial"], ftdis, "FTDI serial"),
+                (item["serial"], serials, "serial"),
             ):
                 if value in seen:
                     raise ValueError(f"duplicate {label}: {value}")
@@ -365,7 +364,7 @@ class StateStore:
         meta = self.state["metadata"].get(name, {})
         return {
             **device,
-            "expected_ftdi_serial": configured["expected_ftdi_serial"],
+            "serial": configured["serial"],
             "metadata": meta,
         }
 
@@ -538,7 +537,7 @@ class StateStore:
             device = next(d for d in self.config.devices if d["name"] == name)
             return {
                 "name": name,
-                "host": device["host"],
+                "serial": device["serial"],
                 "health": self._effective_health(name),
             }
 
@@ -743,7 +742,7 @@ def main() -> None:
     parser.add_argument("--config", type=Path, default=root / "config.json")
     parser.add_argument("--state", type=Path, default=root / "data/state.json")
     parser.add_argument("--secret", type=Path, default=root / "data/secret.key")
-    parser.add_argument("--bind", default="127.0.0.1")
+    parser.add_argument("--bind", default="localhost")
     parser.add_argument("--port", type=int, default=8765)
     args = parser.parse_args()
     if args.command == "init":

@@ -29,7 +29,7 @@ def wait_port():
     deadline = time.monotonic() + 10
     while time.monotonic() < deadline:
         try:
-            with socket.create_connection(("127.0.0.1", PORT), 0.2):
+            with socket.create_connection(("localhost", PORT), 0.2):
                 return
         except OSError:
             time.sleep(0.05)
@@ -92,7 +92,7 @@ def main():
                     "--secret",
                     str(secret),
                     "--bind",
-                    "127.0.0.1",
+                    "localhost",
                     "--port",
                     str(PORT),
                 ],
@@ -103,7 +103,7 @@ def main():
             wait_port()
             run(
                 "real-chrome",
-                [str(PY), "tests/browser.py", "--url", f"http://127.0.0.1:{PORT}"],
+                [str(PY), "tests/browser.py", "--url", f"http://localhost:{PORT}"],
             )
         run("diff-whitespace", ["git", "diff", "--check"])
     except Exception as exc:

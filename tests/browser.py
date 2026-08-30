@@ -154,7 +154,7 @@ def run_interleavings(browser, url: str) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--url", default="http://127.0.0.1:8765")
+    parser.add_argument("--url", default="http://localhost:8765")
     parser.add_argument("--chrome", default="/usr/bin/google-chrome")
     args = parser.parse_args()
     with sync_playwright() as playwright:

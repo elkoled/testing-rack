@@ -35,7 +35,7 @@ def request(base: str, path: str, capability: str, body=None):
 
 def main():
     parser = argparse.ArgumentParser(add_help=False)
-    parser.add_argument("--service", default="http://127.0.0.1:80")
+    parser.add_argument("--service", default="http://localhost:80")
     parser.add_argument("--identity", default="/etc/testing-rack/device_key")
     parser.add_argument("--authorize-only", action="store_true")
     args = parser.parse_args()
@@ -88,7 +88,7 @@ def main():
                     "IdentitiesOnly=yes",
                     "-o",
                     "ClearAllForwardings=yes",
-                    f"comma@{target['host']}",
+                    f"comma@{target['serial']}",
                 ]
             ).returncode
         )

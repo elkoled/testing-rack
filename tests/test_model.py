@@ -36,9 +36,8 @@ class ReservationMachine(RuleBasedStateMachine):
                     "devices": [
                         {
                             "name": f"NUT{i:03d}",
-                            "host": f"192.0.2.{i}",
                             "model": "comma 4",
-                            "expected_ftdi_serial": f"FT{i}",
+                            "serial": f"SERIAL{i:03d}",
                         }
                         for i in range(1, 9)
                     ],

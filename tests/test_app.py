@@ -36,9 +36,8 @@ class StoreTest(unittest.TestCase):
                     "devices": [
                         {
                             "name": f"NUT{i:03d}",
-                            "host": f"192.0.2.{i}",
                             "model": "test device",
-                            "expected_ftdi_serial": f"FT{i}",
+                            "serial": f"SERIAL{i:03d}",
                         }
                         for i in range(1, 4)
                     ],
@@ -114,7 +113,7 @@ class StoreTest(unittest.TestCase):
         self.assertTrue(result["access_commands"][0].endswith("-NUT001"))
         self.assertTrue(result["access_commands"][1].endswith("-NUT002"))
         self.assertEqual(
-            self.store.resolve(result["capability"], "NUT001")["host"], "192.0.2.1"
+            self.store.resolve(result["capability"], "NUT001")["serial"], "SERIAL001"
         )
         with self.assertRaises(RackError) as caught:
             self.store.resolve(result["capability"], "NUT003")
@@ -236,6 +235,25 @@ class StoreTest(unittest.TestCase):
                 self.store.reserve(*args)
         self.assertEqual(self.store.state["leases"], [])
 
+    def test_duplicate_serial_is_rejected(self):
+        devices = [dict(device) for device in self.config.devices]
+        devices[1]["serial"] = devices[0]["serial"]
+        path = Path(self.tmp.name) / "duplicate.json"
+        path.write_text(
+            json.dumps(
+                {
+                    "gateway_host": self.config.gateway_host,
+                    "gateway_port": self.config.gateway_port,
+                    "default_lease_minutes": self.config.default_lease_minutes,
+                    "max_lease_minutes": self.config.max_lease_minutes,
+                    "max_devices_per_reservation": self.config.max_devices_per_reservation,
+                    "devices": devices,
+                }
+            )
+        )
+        with self.assertRaisesRegex(ValueError, "duplicate serial"):
+            Config.load(path)
+
 
 class CliTest(unittest.TestCase):
     def test_init_command_creates_explicit_state(self):
@@ -279,9 +297,8 @@ class ScaleTest(unittest.TestCase):
                         "devices": [
                             {
                                 "name": f"NUT{i:03d}",
-                                "host": f"127.88.0.{i}",
                                 "model": "comma 4",
-                                "expected_ftdi_serial": f"NUT{i:03d}",
+                                "serial": f"NUT{i:03d}",
                             }
                             for i in range(1, 101)
                         ],
