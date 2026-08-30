@@ -37,7 +37,7 @@ class ReservationMachine(RuleBasedStateMachine):
                         {
                             "name": f"NUT{i:03d}",
                             "model": "comma 4",
-                            "device_serial": f"{i:016x}",
+                            "serial": f"{i:08x}",
                         }
                         for i in range(1, 9)
                     ],

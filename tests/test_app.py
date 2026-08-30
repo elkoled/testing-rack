@@ -37,7 +37,7 @@ class StoreTest(unittest.TestCase):
                         {
                             "name": f"NUT{i:03d}",
                             "model": "test device",
-                            "device_serial": f"{i:016x}",
+                            "serial": f"{i:08x}",
                         }
                         for i in range(1, 4)
                     ],
@@ -113,8 +113,8 @@ class StoreTest(unittest.TestCase):
         self.assertTrue(result["access_commands"][0].endswith("-NUT001"))
         self.assertTrue(result["access_commands"][1].endswith("-NUT002"))
         self.assertEqual(
-            self.store.resolve(result["capability"], "NUT001")["device_serial"],
-            "0000000000000001",
+            self.store.resolve(result["capability"], "NUT001")["serial"],
+            "00000001",
         )
         with self.assertRaises(RackError) as caught:
             self.store.resolve(result["capability"], "NUT003")
@@ -238,7 +238,7 @@ class StoreTest(unittest.TestCase):
 
     def test_duplicate_serial_is_rejected(self):
         devices = [dict(device) for device in self.config.devices]
-        devices[1]["device_serial"] = devices[0]["device_serial"]
+        devices[1]["serial"] = devices[0]["serial"]
         path = Path(self.tmp.name) / "duplicate.json"
         path.write_text(
             json.dumps(
@@ -252,7 +252,7 @@ class StoreTest(unittest.TestCase):
                 }
             )
         )
-        with self.assertRaisesRegex(ValueError, "duplicate device serial"):
+        with self.assertRaisesRegex(ValueError, "duplicate serial"):
             Config.load(path)
 
 
@@ -299,7 +299,7 @@ class ScaleTest(unittest.TestCase):
                             {
                                 "name": f"NUT{i:03d}",
                                 "model": "comma 4",
-                                "device_serial": f"{i:016x}",
+                                "serial": f"{i:08x}",
                             }
                             for i in range(1, 101)
                         ],

@@ -7,7 +7,7 @@ import gateway
 
 
 class GatewayTest(unittest.TestCase):
-    def test_final_target_uses_comma_device_serial(self):
+    def test_final_target_uses_comma_serial(self):
         reservation = {
             "display_id": "TEST",
             "devices": ["NUT001"],
@@ -15,7 +15,7 @@ class GatewayTest(unittest.TestCase):
         }
         target = {
             "name": "NUT001",
-            "device_serial": "a1b2c3d4e5f60718",
+            "serial": "6f9f27a9",
             "health": "ready",
         }
         completed = mock.Mock(returncode=0)
@@ -32,7 +32,7 @@ class GatewayTest(unittest.TestCase):
         ):
             gateway.main()
         self.assertEqual(stopped.exception.code, 0)
-        self.assertEqual(run.call_args.args[0][-1], "comma@comma-a1b2c3d4e5f60718")
+        self.assertEqual(run.call_args.args[0][-1], "comma@comma-6f9f27a9")
 
 
 if __name__ == "__main__":

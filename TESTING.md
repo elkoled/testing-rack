@@ -22,7 +22,7 @@ failed or skipped row means the build is not releasable.
 | 20 concurrent users / 100 devices | deterministic scale test |
 
 Production acceptance additionally verifies the installed file hashes, hardened
-systemd/SSH configuration, persistence across a real service restart, DNS/HTTP,
+systemd/SSH configuration, persistence across a real service restart, HTTP,
 and an exact generated `ssh rack@rack-gateway TOKEN-NUTxxx` command in
 hardware-disabled mode. Physical rack targets are never contacted by this gate.
 

@@ -34,7 +34,7 @@ async def handle(
 
 
 async def run(count: int, port: int) -> None:
-    available = {f"{index:016x}" for index in range(1, count + 1) if index != 2}
+    available = {f"{index:08x}" for index in range(1, count + 1) if index != 2}
     await asyncio.start_server(
         lambda reader, writer: handle(available, reader, writer),
         "localhost",
