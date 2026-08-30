@@ -40,9 +40,9 @@ def run_case(browser, url: str, scenario: str, init_script: str, viewport: str) 
         page.locator("#reserve").click()
         page.locator("#reservation").wait_for(state="visible")
         command = page.locator("#command").inner_text()
-        assert command.startswith("ssh rack@rack-gateway ") and command.endswith(
-            tuple(f"-NUT{i:03d}" for i in range(1, 1000))
-        )
+        assert command.startswith(
+            "ssh rack@chestnut.comma.internal "
+        ) and command.endswith(tuple(f"-NUT{i:03d}" for i in range(1, 1000)))
         assert page.locator("#reserve-form").is_hidden()
         # Persistence must not depend on retaining the URL fragment. A plain visit
         # and another tab in the same browser profile must restore the lease.

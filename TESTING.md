@@ -12,7 +12,7 @@ failed or skipped row means the build is not releasable.
 | Crash/restart durability and corrupt/missing state | restart and fail-closed unit tests |
 | Interrupted disk commit | injected final-commit failure where memory and current disk remain unchanged |
 | Capability cannot access another device | virtual SSH gateway integration |
-| Dead device degrades without losing the lease | virtual comma 4 unreachable-device integration |
+| Dead device degrades without losing the lease | virtual four unreachable-device integration |
 | Released/random/malformed credentials fail | virtual SSH gateway integration and API boundary tests |
 | Multiple tabs and rapid clicks converge | real Chrome interleaving tests and storage-event regression |
 | Plain URL/new tab restores ownership on the same PC profile | real Chrome localStorage lifecycle tests |
@@ -23,7 +23,7 @@ failed or skipped row means the build is not releasable.
 
 Production acceptance additionally verifies the installed file hashes, hardened
 systemd/SSH configuration, persistence across a real service restart, HTTP,
-and an exact generated `ssh rack@rack-gateway TOKEN-NUTxxx` command in
+and an exact generated `ssh rack@chestnut.comma.internal TOKEN-NUTxxx` command in
 hardware-disabled mode. Physical rack targets are never contacted by this gate.
 
 Threat boundary: without company SSO, a Name is a cooperative identity rather

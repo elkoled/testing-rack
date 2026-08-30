@@ -36,7 +36,7 @@ class StoreTest(unittest.TestCase):
                     "devices": [
                         {
                             "name": f"NUT{i:03d}",
-                            "model": "test device",
+                            "device_type": "four",
                             "serial": f"{i:08x}",
                         }
                         for i in range(1, 4)
@@ -298,7 +298,7 @@ class ScaleTest(unittest.TestCase):
                         "devices": [
                             {
                                 "name": f"NUT{i:03d}",
-                                "model": "comma 4",
+                                "device_type": "four",
                                 "serial": f"{i:08x}",
                             }
                             for i in range(1, 101)

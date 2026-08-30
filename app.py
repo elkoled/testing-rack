@@ -92,7 +92,7 @@ class Config:
         for item in raw["devices"]:
             if not isinstance(item, dict) or set(item) != {
                 "name",
-                "model",
+                "device_type",
                 "serial",
             }:
                 raise ValueError("every device needs name, model, and serial")
@@ -337,7 +337,7 @@ class StateStore:
                 devices.append(
                     {
                         "name": item["name"],
-                        "model": item["model"],
+                        "device_type": item["device_type"],
                         "health": health,
                         "state": "reserved" if lease else health,
                         "nickname": lease["nickname"] if lease else None,

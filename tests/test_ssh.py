@@ -45,18 +45,18 @@ class VirtualRackIntegrationTest(unittest.TestCase):
                     "devices": [
                         {
                             "name": "NUT001",
-                            "model": "comma 4",
+                            "device_type": "four",
                             "serial": "00000001",
                         },
                         # Deliberately absent: verifies graceful device-unavailable behavior.
                         {
                             "name": "NUT002",
-                            "model": "comma 4",
+                            "device_type": "four",
                             "serial": "00000002",
                         },
                         {
                             "name": "NUT003",
-                            "model": "comma 4",
+                            "device_type": "four",
                             "serial": "00000003",
                         },
                     ],
@@ -212,7 +212,7 @@ class VirtualRackIntegrationTest(unittest.TestCase):
         )
         payload = json.loads(healthy.stdout)
         self.assertEqual(payload["target_identity"]["serial"], "00000001")
-        self.assertEqual(payload["target_identity"]["hardware"], "comma 4")
+        self.assertEqual(payload["target_identity"]["hardware"], "four")
 
         unavailable = self.ssh(f"{capability}-NUT002")
         self.assertEqual(unavailable.returncode, 4)

@@ -19,7 +19,7 @@ async def handle(
         if serial in available:
             response = {
                 "device": serial,
-                "hardware": "comma 4",
+                "hardware": "four",
                 "serial": serial,
                 "state": "offroad",
                 "virtual": True,
@@ -40,7 +40,7 @@ async def run(count: int, port: int) -> None:
         "localhost",
         port,
     )
-    print(f"{len(available)} virtual comma 4 serials ready", flush=True)
+    print(f"{len(available)} virtual four serials ready", flush=True)
     await asyncio.Future()
 
 

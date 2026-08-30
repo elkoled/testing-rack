@@ -53,7 +53,7 @@ def main():
     elif legacy:
         capability, device = legacy.groups()
     else:
-        raise SystemExit("Usage: ssh rack@rack-gateway 7Km3P9xQvT2w-NUT001")
+        raise SystemExit("Usage: ssh rack@chestnut.comma.internal 7Km3P9xQvT2w-NUT001")
     reservation = request(args.service, "/api/reservations/current", capability)
     if device not in reservation["devices"]:
         raise SystemExit(

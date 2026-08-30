@@ -147,7 +147,7 @@ async def handle(
                 "expires_at": reservation["expires_at"],
                 "mode": "virtual-device" if identity else "simulation",
                 "target_identity": identity,
-                "message": "Gateway reached and verified the virtual comma 4."
+                "message": "Gateway reached and verified the virtual four."
                 if identity
                 else "Gateway access works; real device forwarding remains disabled.",
             }
