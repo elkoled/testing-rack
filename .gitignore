@@ -42,6 +42,8 @@ htmlcov/
 .nox/
 .coverage
 .coverage.*
+data/
+release-gate-report.json
 .cache
 nosetests.xml
 coverage.xml

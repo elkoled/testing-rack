@@ -1,0 +1,6 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>testing-rack</title><link rel="stylesheet" href="/style.css"><script defer src="/app.js"></script></head><body><main>
+<header><h1>testing-rack</h1><span id="availability">Loading…</span></header>
+<form id="reserve-form"><label>Name<input id="nickname" autocomplete="name" minlength="2" maxlength="32" placeholder="alex" required></label><label>Devices<select id="count"></select></label><label>Duration<select id="duration"></select></label><button id="reserve" type="submit">Reserve device</button></form><p id="message" role="status"></p>
+<section id="reservation" hidden><div><small>YOUR RESERVATION</small><h2 id="reservation-title"></h2><p id="reservation-devices"></p></div><div class="access"><code id="command"></code><div class="actions"><button id="copy">Copy command</button><button id="release">Release devices</button></div></div></section>
+<section id="matrix" aria-label="Devices"></section><p id="offline" hidden>Rack unavailable. Retrying…</p>
+</main></body></html>
