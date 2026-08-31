@@ -6,6 +6,7 @@ import json
 import os
 import subprocess
 import sys
+import time
 import urllib.error
 import urllib.request
 import re
@@ -78,6 +79,15 @@ def main():
         )
         return
     else:
+        remaining = max(0, int((reservation["expires_at"] - time.time()) / 60))
+        print(
+            f"testing-rack · {device} · {remaining}m remaining\n"
+            f"serial {target['serial']}\n"
+            f"FTDI {target.get('ftdi_serial', 'not installed')}\n"
+            f"GPU power {target.get('gpu_power_switch', 'not installed')}\n"
+            f"Connecting to comma-{target['serial']}...",
+            flush=True,
+        )
         raise SystemExit(
             subprocess.run(
                 [

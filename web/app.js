@@ -31,6 +31,7 @@ const fragmentCapability = new URLSearchParams(location.hash.slice(1)).get(
 const savedCapability = storedCapability()
 const ui = {
   state: null,
+  reservation: null,
   capability: savedCapability || fragmentCapability,
   busy: false,
   fallback:
@@ -115,7 +116,13 @@ function card(device) {
 }
 function render() {
   const ready = ui.state.devices.filter((d) => d.state === "ready").length
-  setText("availability", `${ready} of ${ui.state.devices.length} ready`)
+  const yours = ui.reservation?.devices.length || 0
+  setText(
+    "availability",
+    yours
+      ? `${yours} yours · ${ready} free`
+      : `${ready} free · ${ui.state.devices.length - ready} reserved`,
+  )
   $("matrix").replaceChildren(...ui.state.devices.map(card))
 }
 async function load() {
@@ -137,6 +144,8 @@ async function load() {
   }
 }
 function show(result) {
+  ui.reservation = result
+  if (ui.state) render()
   rememberCapability(result.capability)
   ui.fallback = null
   history.replaceState(
@@ -168,6 +177,7 @@ async function refresh() {
       return refresh()
     }
     ui.capability = null
+    ui.reservation = null
     rememberCapability(null)
     $("reservation").hidden = true
     $("reserve-form").hidden = false
@@ -210,12 +220,34 @@ $("reserve-form").onsubmit = async (event) => {
 }
 $("copy").onclick = async () => {
   const original = $("copy").textContent
+  const text = $("command").textContent
   try {
-    await navigator.clipboard.writeText($("command").textContent)
+    if (!navigator.clipboard?.writeText) throw Error("Clipboard API unavailable")
+    await navigator.clipboard.writeText(text)
     setText("copy", "Copied")
     setTimeout(() => setText("copy", original), 1000)
   } catch {
-    setText("message", "Copy failed. Select and copy the command manually.")
+    const field = document.createElement("textarea")
+    field.value = text
+    field.setAttribute("readonly", "")
+    field.style.position = "fixed"
+    field.style.opacity = "0"
+    document.body.append(field)
+    field.select()
+    const copied = document.execCommand("copy")
+    field.remove()
+    if (copied) {
+      setText("copy", "Copied")
+      setText("message", "")
+      setTimeout(() => setText("copy", original), 1000)
+    } else {
+      const selection = getSelection()
+      const range = document.createRange()
+      range.selectNodeContents($("command"))
+      selection.removeAllRanges()
+      selection.addRange(range)
+      setText("message", "Command selected. Press Ctrl+C or Command+C.")
+    }
   }
 }
 $("release").onclick = async () => {
@@ -223,6 +255,7 @@ $("release").onclick = async () => {
   try {
     await api("/api/reservations/current", { method: "DELETE" })
     ui.capability = null
+    ui.reservation = null
     rememberCapability(null)
     history.replaceState(null, "", location.pathname)
     $("reservation").hidden = true

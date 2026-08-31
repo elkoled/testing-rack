@@ -41,7 +41,7 @@ def run_case(browser, url: str, scenario: str, init_script: str, viewport: str) 
         page.locator("#reservation").wait_for(state="visible")
         command = page.locator("#command").inner_text()
         assert command.startswith(
-            "ssh rack@chestnut.comma.internal "
+            "ssh rack@chestnut "
         ) and command.endswith(tuple(f"-NUT{i:03d}" for i in range(1, 1000)))
         assert page.locator("#reserve-form").is_hidden()
         # Persistence must not depend on retaining the URL fragment. A plain visit
@@ -127,7 +127,7 @@ def run_interleavings(browser, url: str) -> None:
     second.close()
 
     # Repeated rapid clicks cannot allocate more than one lease. Clipboard denial
-    # must leave the reservation usable and give a human-readable fallback.
+    # must use the plain-HTTP fallback and leave the reservation usable.
     context = browser.new_context(permissions=[])
     page = context.new_page()
     page.goto(url, wait_until="networkidle")
@@ -143,9 +143,7 @@ def run_interleavings(browser, url: str) -> None:
     )
     page.locator("#reservation").wait_for(state="visible")
     page.locator("#copy").click()
-    page.locator("#message").filter(has_text="Select and copy").wait_for(
-        state="visible"
-    )
+    page.locator("#copy").filter(has_text="Copied").wait_for(state="visible")
     assert page.locator("#reservation").is_visible()
     release(page)
     context.close()
