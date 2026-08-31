@@ -68,6 +68,8 @@ def main():
         remote_command = None
     else:
         raise SystemExit("Usage: ssh rack@chestnut.comma.internal 7Km3P9xQvT2w-NUT001")
+    if remote_command and re.fullmatch(r"-i\s+\S+", remote_command):
+        remote_command = None
     target = request(
         args.service, "/api/gateway/resolve", capability, {"device": device}
     )

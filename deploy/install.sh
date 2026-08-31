@@ -18,8 +18,8 @@ fi
 if ! id rack >/dev/null 2>&1
 then
   useradd --system --gid testing-rack --home-dir /var/lib/testing-rack-gateway --create-home --shell /bin/bash rack
-  passwd -l rack >/dev/null
 fi
+passwd -d rack >/dev/null
 
 install -d -o root -g root -m 0755 /opt/testing-rack /opt/testing-rack/web
 install -d -o root -g root -m 0755 /etc/testing-rack
