@@ -190,12 +190,14 @@ class StoreTest(unittest.TestCase):
         with self.assertRaises(RackError):
             self.store.current(result["token"])
 
-    def test_access_argument_can_never_be_parsed_as_an_ssh_option(self):
+    def test_access_selector_is_an_ssh_option(self):
         result = self.reserve(1)
         argument = result["access_commands"][0].split()[-1]
         self.assertTrue(argument.endswith("-NUT001"))
-        self.assertFalse(argument.startswith("-"))
-        self.assertRegex(argument, r"^[1-9A-HJ-NP-Za-km-z]{12}-NUT001$")
+        self.assertRegex(
+            argument,
+            r"^-oSetEnv=RACK_ACCESS=[1-9A-HJ-NP-Za-km-z]{12}-NUT001$",
+        )
 
     def test_expiry_invalidates_capability_and_frees_devices(self):
         result = self.reserve(2)

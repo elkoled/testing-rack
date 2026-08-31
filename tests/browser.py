@@ -56,7 +56,7 @@ def run_case(browser, url: str, scenario: str, init_script: str, viewport: str) 
         command = page.locator("#command").inner_text()
         commands = command.splitlines()
         assert len(commands) == 2
-        assert commands[0].startswith("ssh -i ~/.ssh/xx_key rack@chestnut ")
+        assert commands[0].startswith("ssh rack@chestnut -oSetEnv=RACK_ACCESS=")
         assert commands[0].endswith("-NUT001")
         assert commands[1].endswith("-NUT004")
         assert "min" not in page.locator("#reservation-title").inner_text()

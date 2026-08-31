@@ -52,22 +52,31 @@ def main():
     parser.add_argument("--authorize-only", action="store_true")
     args = parser.parse_args()
     original = os.environ.get("SSH_ORIGINAL_COMMAND", "")
-    match, previous, legacy = (
-        DIRECT_RE.fullmatch(original),
-        PREVIOUS_RE.fullmatch(original),
-        LEGACY_RE.fullmatch(original),
-    )
-    if match:
-        capability, device, remote_command = match.groups()
-    elif previous:
-        device, *groups = previous.groups()
-        capability = "".join(groups)
-        remote_command = None
-    elif legacy:
-        capability, device = legacy.groups()
-        remote_command = None
+    access = os.environ.get("RACK_ACCESS")
+    if access:
+        match = DIRECT_RE.fullmatch(access)
+        if not match or match.group(3) is not None:
+            raise SystemExit("Invalid rack access selector.")
+        capability, device, _ = match.groups()
+        remote_command = original or None
+        previous = legacy = None
     else:
-        raise SystemExit("Usage: ssh rack@chestnut.comma.internal 7Km3P9xQvT2w-NUT001")
+        match, previous, legacy = (
+            DIRECT_RE.fullmatch(original),
+            PREVIOUS_RE.fullmatch(original),
+            LEGACY_RE.fullmatch(original),
+        )
+        if match:
+            capability, device, remote_command = match.groups()
+        elif previous:
+            device, *groups = previous.groups()
+            capability = "".join(groups)
+            remote_command = None
+        elif legacy:
+            capability, device = legacy.groups()
+            remote_command = None
+        else:
+            raise SystemExit("Usage: ssh rack@chestnut 7Km3P9xQvT2w-NUT001")
     if remote_command and re.fullmatch(r"-i\s+\S+", remote_command):
         remote_command = None
     target = request(

@@ -23,7 +23,7 @@ failed or skipped row means the build is not releasable.
 
 Production acceptance additionally verifies the installed file hashes, hardened
 systemd/SSH configuration, persistence across a real service restart, HTTP,
-and an exact generated `ssh -i ~/.ssh/xx_key rack@chestnut TOKEN-NUTxxx` command in
+and an exact generated `ssh rack@chestnut -oSetEnv=RACK_ACCESS=TOKEN-NUTxxx` command in
 hardware-disabled mode. Physical rack targets are never contacted by this gate.
 
 Threat boundary: without company SSO, a Name is a cooperative identity rather
