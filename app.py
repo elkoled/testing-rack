@@ -158,14 +158,19 @@ class Config:
 
 class StateStore:
     def __init__(
-        self, config: Config, state_path: Path, secret_path: Path, now=time.time
+        self,
+        config: Config,
+        state_path: Path,
+        secret_path: Path,
+        now=time.time,
+        health_path: Path | None = None,
     ):
         self.config, self.path, self.previous = (
             config,
             state_path,
             state_path.with_name("state.previous.json"),
         )
-        self.now, self.lock = now, threading.RLock()
+        self.now, self.lock, self.health_path = now, threading.RLock(), health_path
         self.secret = secret_path.read_bytes()
         if len(self.secret) < 32:
             raise ValueError("secret must contain at least 32 random bytes")
@@ -283,10 +288,32 @@ class StateStore:
             )
         return lease
 
-    def _effective_health(self, name: str) -> str:
+    def _connection_health(self) -> dict[str, str]:
+        if self.health_path is None:
+            return {}
+        try:
+            health = json.loads(self.health_path.read_text())
+            if not isinstance(health, dict) or any(
+                value not in {"ready", "offline"} for value in health.values()
+            ):
+                raise ValueError("invalid health")
+            return health
+        except (OSError, ValueError, json.JSONDecodeError):
+            return {device["name"]: "unknown" for device in self.config.devices}
+
+    def _effective_health(
+        self, name: str, connection_health: dict[str, str] | None = None
+    ) -> str:
         override = self.state["overrides"].get(name)
         if override in {"degraded", "offline", "unknown"}:
             return override
+        connection_health = (
+            self._connection_health()
+            if connection_health is None
+            else connection_health
+        )
+        if name in connection_health:
+            return connection_health[name]
         return self.state["metadata"].get(name, {}).get("health", "ready")
 
     def _expire(self, state: dict[str, Any], now: float) -> bool:
@@ -355,6 +382,7 @@ class StateStore:
                 for lease in self.state["leases"]
                 for name in lease["devices"]
             }
+            connection_health = self._connection_health()
             devices = []
             for item in sorted(
                 self.config.devices,
@@ -362,7 +390,7 @@ class StateStore:
             ):
                 lease, health = (
                     owners.get(item["name"]),
-                    self._effective_health(item["name"]),
+                    self._effective_health(item["name"], connection_health),
                 )
                 devices.append(
                     {
@@ -477,11 +505,12 @@ class StateStore:
             occupied = {
                 name for lease in self.state["leases"] for name in lease["devices"]
             }
+            connection_health = self._connection_health()
             ready = [
                 d["name"]
                 for d in self.config.devices
                 if d["name"] not in occupied
-                and self._effective_health(d["name"]) == "ready"
+                and self._effective_health(d["name"], connection_health) == "ready"
             ]
             ready.sort(key=lambda name: int(NAME_RE.fullmatch(name).group(1)))
             if len(ready) < count:
@@ -787,6 +816,7 @@ def main() -> None:
     parser.add_argument("--config", type=Path, default=root / "config.json")
     parser.add_argument("--state", type=Path, default=root / "data/state.json")
     parser.add_argument("--secret", type=Path, default=root / "data/secret.key")
+    parser.add_argument("--health", type=Path)
     parser.add_argument("--bind", default="localhost")
     parser.add_argument("--port", type=int, default=8765)
     args = parser.parse_args()
@@ -796,7 +826,7 @@ def main() -> None:
         print(f"initialized {args.state}")
         return
     config = Config.load(args.config)
-    store = StateStore(config, args.state, args.secret)
+    store = StateStore(config, args.state, args.secret, health_path=args.health)
     static_dir = root / "web"
     handler = type(
         "TestingRackHandler",

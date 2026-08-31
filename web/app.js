@@ -99,22 +99,29 @@ function buttonLabel() {
 }
 function card(device) {
   const el = document.createElement("article")
-  el.className = `device ${device.state}`
+  const state = device.health === "ready" ? device.state : device.health
+  el.className = `device ${state}`
   const name = document.createElement("b"),
     status = document.createElement("span")
   name.textContent = device.name
   status.textContent =
-    device.state === "reserved"
+    state === "reserved"
       ? `${device.nickname} · ${left(device.expires_at)}`
-      : device.state
+      : state
   el.append(name, status)
   return el
 }
 function render() {
   const ready = ui.state.devices.filter((d) => d.state === "ready").length
+  const offline = ui.state.devices.filter((d) => d.health === "offline").length
+  const reserved = ui.state.devices.filter(
+    (d) => d.state === "reserved" && d.health !== "offline",
+  ).length
+  const parts = [`${reserved} reserved`, `${ready} free`]
+  if (offline) parts.push(`${offline} offline`)
   setText(
     "availability",
-    `${ui.state.devices.length - ready} reserved · ${ready} free`,
+    parts.join(" · "),
   )
   $("matrix").replaceChildren(...ui.state.devices.map(card))
 }

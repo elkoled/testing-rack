@@ -2,3 +2,4 @@
 @media(max-width:460px){.actions{grid-template-columns:1fr!important}}
 [hidden]{display:none!important}
 html.loading body{visibility:hidden}
+.device.offline{filter:grayscale(1);opacity:.45}

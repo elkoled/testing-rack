@@ -8,7 +8,7 @@ Type=simple
 User=testing-rack
 Group=testing-rack
 WorkingDirectory=/opt/testing-rack
-ExecStart=/usr/bin/python3 /opt/testing-rack/app.py serve --config /etc/testing-rack/config.json --state /var/lib/testing-rack/state.json --secret /var/lib/testing-rack/secret.key --bind= --port 80
+ExecStart=/usr/bin/python3 /opt/testing-rack/app.py serve --config /etc/testing-rack/config.json --state /var/lib/testing-rack/state.json --secret /var/lib/testing-rack/secret.key --health /var/lib/testing-rack-gateway/health.json --bind= --port 80
 Restart=always
 RestartSec=1
 AmbientCapabilities=CAP_NET_BIND_SERVICE
@@ -18,6 +18,7 @@ PrivateTmp=yes
 ProtectHome=yes
 ProtectSystem=strict
 ReadWritePaths=/var/lib/testing-rack
+ReadOnlyPaths=/var/lib/testing-rack-gateway
 
 [Install]
 WantedBy=multi-user.target

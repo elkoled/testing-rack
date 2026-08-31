@@ -75,6 +75,15 @@ class StoreTest(unittest.TestCase):
         self.assertTrue(result["access_commands"][1].endswith("-NUT002"))
         self.assertTrue(result["access_commands"][2].endswith("-NUT003"))
 
+    def test_connection_health_blocks_offline_allocation(self):
+        health = Path(self.tmp.name) / "health.json"
+        health.write_text('{"NUT001":"offline","NUT002":"ready","NUT003":"ready"}')
+        self.store.health_path = health
+        state = self.store.public_state()
+        self.assertEqual(state["devices"][0]["state"], "offline")
+        result = self.reserve(1)
+        self.assertEqual(result["devices"], ["NUT002"])
+
     def test_idempotency_returns_same_capability_without_second_lease(self):
         first = self.reserve(2)
         second = self.reserve(2)
