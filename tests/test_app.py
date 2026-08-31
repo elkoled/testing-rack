@@ -118,11 +118,7 @@ class StoreTest(unittest.TestCase):
             result["actions"]["NUT001"],
             ["gpu_power:on", "gpu_power:off", "ftdi:reset"],
         )
-        self.assertTrue(
-            result["action_commands"]["NUT001"][0].endswith(
-                "-NUT001 gpu_power:on"
-            )
-        )
+        self.assertNotIn("action_commands", result)
         self.assertEqual(
             self.store.resolve(result["capability"], "NUT001")["serial"],
             "00000001",

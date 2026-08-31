@@ -516,7 +516,6 @@ class StateStore:
         )
         commands = [f"{prefix} {capability}-{name}" for name in lease["devices"]]
         actions = {}
-        action_commands = {}
         for name in lease["devices"]:
             device = next(item for item in self.config.devices if item["name"] == name)
             available = []
@@ -525,9 +524,6 @@ class StateStore:
             if "ftdi_serial" in device:
                 available.append("ftdi:reset")
             actions[name] = available
-            action_commands[name] = [
-                f"{prefix} {capability}-{name} {action}" for action in available
-            ]
         return {
             "capability": capability,
             "display_id": lease["display_id"],
@@ -538,7 +534,6 @@ class StateStore:
             "gateway_command": commands[0],
             "access_commands": commands,
             "actions": actions,
-            "action_commands": action_commands,
         }
 
     def current(self, capability: str) -> dict[str, Any]:

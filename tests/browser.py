@@ -44,6 +44,10 @@ def run_case(browser, url: str, scenario: str, init_script: str, viewport: str) 
             "ssh rack@chestnut "
         ) and command.endswith(tuple(f"-NUT{i:03d}" for i in range(1, 1000)))
         assert page.locator("#reserve-form").is_hidden()
+        assert page.locator("#controls").inner_text() == (
+            "Optional actions: append gpu_power:on · gpu_power:off · ftdi:reset"
+        )
+        assert "NUT" not in page.locator("#controls").inner_text()
         # Persistence must not depend on retaining the URL fragment. A plain visit
         # and another tab in the same browser profile must restore the lease.
         page.goto(url, wait_until="networkidle")

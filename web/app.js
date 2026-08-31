@@ -160,17 +160,18 @@ function show(result) {
     `${result.devices.length} device${result.devices.length === 1 ? "" : "s"} · ${left(result.expires_at)} remaining`,
   )
   setText("reservation-devices", result.devices.join("  ·  "))
+  const actions = [...new Set(Object.values(result.actions || {}).flat())]
+  $("controls").hidden = actions.length === 0
   setText(
     "controls",
-    Object.entries(result.actions || {})
-      .filter(([, actions]) => actions.length)
-      .map(([device, actions]) => `${device}: ${actions.join(" · ")}`)
-      .join("\n"),
+    actions.length
+      ? `Optional actions: append ${actions.join(" · ")}`
+      : "",
   )
   setText("command", result.access_commands.join("\n"))
   setText(
     "copy",
-    result.devices.length === 1 ? "Copy command" : "Copy all commands",
+    result.devices.length === 1 ? "Copy SSH" : "Copy all SSH",
   )
 }
 async function refresh() {
