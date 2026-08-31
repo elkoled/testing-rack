@@ -40,6 +40,7 @@ def run_case(browser, url: str, scenario: str, init_script: str, viewport: str) 
         started = time.monotonic()
         page.locator("#reserve").click()
         page.locator("#reservation").wait_for(state="visible")
+        assert page.locator("#reservation-title").inner_text().startswith(f"{name} · ")
         command = page.locator("#command").inner_text()
         assert command.startswith(
             "ssh rack@chestnut "
@@ -48,18 +49,10 @@ def run_case(browser, url: str, scenario: str, init_script: str, viewport: str) 
         assert "loading" not in (
             page.locator("html").get_attribute("class") or ""
         ).split()
-        context_text = page.evaluate("contextText()")
-        assert context_text.startswith("Reserved NUT")
-        assert " on chestnut_rack for " in context_text
-        assert "open a shell on its assigned test device" in context_text
-        assert "Actions: gpu_power:on, gpu_power:off, ftdi:reset" in context_text
-        assert "\nExample: ssh rack@chestnut " in context_text
-        assert context_text.endswith(
-            "Access stops when the reservation expires. Use only these gateway commands."
+        assert page.locator("#controls").inner_text() == (
+            "Append for actions: gpu_power:on · gpu_power:off · ftdi:reset"
         )
-        assert page.locator("#context").inner_text() == context_text
         assert page.locator("#copy-ssh").inner_text() == "Copy SSH"
-        assert page.locator("#copy-context").inner_text() == "Copy context"
         availability = page.locator("#availability").inner_text()
         assert "reserved ·" in availability and availability.endswith(" free")
         assert page.evaluate(
@@ -170,8 +163,8 @@ def run_interleavings(browser, url: str) -> None:
         }"""
     )
     page.locator("#reservation").wait_for(state="visible")
-    page.locator("#copy-context").click()
-    page.locator("#copy-context").filter(has_text="Copied").wait_for(state="visible")
+    page.locator("#copy-ssh").click()
+    page.locator("#copy-ssh").filter(has_text="Copied").wait_for(state="visible")
     assert page.locator("#reservation").is_visible()
     release(page)
     context.close()

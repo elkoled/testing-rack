@@ -154,32 +154,16 @@ function show(result) {
   $("reserve-form").hidden = true
   setText(
     "reservation-title",
-    `${result.devices.length} device${result.devices.length === 1 ? "" : "s"} · ${left(result.expires_at)} remaining`,
+    `${result.nickname} · ${result.devices.length} device${result.devices.length === 1 ? "" : "s"} · ${left(result.expires_at)} remaining`,
   )
-  setText("command", result.access_commands.join("\n"))
-  setText("context", contextText())
-  setText("copy-ssh", "Copy SSH")
-  setText("copy-context", "Copy context")
-}
-function contextText() {
-  const result = ui.reservation
   const actions = [...new Set(Object.values(result.actions || {}).flat())]
-  const lines = [
-    `Reserved ${result.devices.join(", ")} on ${ui.state.display_name} for ${left(result.expires_at)} more.`,
-    "Run an SSH command above to open a shell on its assigned test device.",
-  ]
-  if (actions.length) {
-    lines.push(
-      "Append an action to the same command to control that device without opening a shell.",
-      `Actions: ${actions.join(", ")}`,
-    )
-    if (actions.includes("gpu_power:on"))
-      lines.push(`Example: ${result.access_commands[0]} gpu_power:on`)
-  }
-  lines.push(
-    "Access stops when the reservation expires. Use only these gateway commands.",
+  setText("command", result.access_commands.join("\n"))
+  $("controls").hidden = actions.length === 0
+  setText(
+    "controls",
+    actions.length ? `Append for actions: ${actions.join(" · ")}` : "",
   )
-  return lines.join("\n")
+  setText("copy-ssh", "Copy SSH")
 }
 async function refresh() {
   try {
@@ -266,8 +250,6 @@ async function copyText(buttonId, text, sourceId) {
 }
 $("copy-ssh").onclick = () =>
   copyText("copy-ssh", $("command").textContent, "command")
-$("copy-context").onclick = () =>
-  copyText("copy-context", $("context").textContent, "context")
 $("release").onclick = async () => {
   if (!confirm("Release all devices in this reservation?")) return
   try {

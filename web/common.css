@@ -1,4 +1,4 @@
-#command,#context{display:block;white-space:pre-wrap!important;overflow-wrap:anywhere!important;word-break:break-word;line-height:1.7}.access>small{display:block;margin:14px 0 6px}.actions{grid-template-columns:repeat(3,minmax(0,1fr))!important}.actions button{width:100%!important;min-width:0}
+#command{display:block;white-space:pre-wrap!important;overflow-wrap:anywhere!important;word-break:break-word;line-height:1.7}.access>small{display:block;margin:14px 0 6px}.actions{grid-template-columns:repeat(2,minmax(0,1fr))!important}.actions button{width:100%!important;min-width:0}
 @media(max-width:460px){.actions{grid-template-columns:1fr!important}}
 [hidden]{display:none!important}
 html.loading body{visibility:hidden}
