@@ -41,6 +41,7 @@ class RackError(Exception):
 @dataclass(frozen=True)
 class Config:
     display_name: str
+    api_host: str
     gateway_host: str
     gateway_port: int
     default_lease_minutes: int
@@ -63,7 +64,7 @@ class Config:
             "devices",
         }
         if not required.issubset(raw) or not set(raw).issubset(
-            required | {"display_name"}
+            required | {"display_name", "api_host"}
         ):
             raise ValueError("config fields are invalid")
         display_name = raw.get("display_name", "testing-rack")
@@ -71,6 +72,9 @@ class Config:
             r"[a-z0-9][a-z0-9_-]{0,31}", display_name
         ):
             raise ValueError("display_name is invalid")
+        api_host = raw.get("api_host", raw["gateway_host"])
+        if not isinstance(api_host, str) or not api_host.strip():
+            raise ValueError("api_host is invalid")
         if not isinstance(raw["gateway_host"], str) or not raw["gateway_host"].strip():
             raise ValueError("gateway_host must be a non-empty string")
         if (
@@ -147,6 +151,7 @@ class Config:
             raise ValueError("max_devices_per_reservation exceeds inventory")
         return cls(
             display_name,
+            api_host,
             raw["gateway_host"],
             raw["gateway_port"],
             raw["default_lease_minutes"],
@@ -411,6 +416,7 @@ class StateStore:
                 "max_devices": self.config.max_devices_per_reservation,
                 "default_duration": self.config.default_lease_minutes,
             "gateway_host": self.config.gateway_host,
+            "api_host": self.config.api_host,
             "display_name": self.config.display_name,
             }
 

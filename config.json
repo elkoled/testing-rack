@@ -1,5 +1,6 @@
 {
   "display_name": "chestnut_rack",
+  "api_host": "chestnut.comma.internal",
   "gateway_host": "chestnut",
   "gateway_port": 22,
   "default_lease_minutes": 60,
