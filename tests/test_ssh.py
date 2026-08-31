@@ -39,8 +39,7 @@ class VirtualRackIntegrationTest(unittest.TestCase):
                 {
                     "gateway_host": "localhost",
                     "gateway_port": 23022,
-                    "default_lease_minutes": 60,
-                    "max_lease_minutes": 1440,
+                    "idle_timeout_minutes": 60,
                     "max_devices_per_reservation": 3,
                     "devices": [
                         {

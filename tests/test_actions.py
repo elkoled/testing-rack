@@ -18,8 +18,7 @@ class ActionTest(unittest.TestCase):
                 {
                     "gateway_host": "rack",
                     "gateway_port": 22,
-                    "default_lease_minutes": 60,
-                    "max_lease_minutes": 1440,
+                    "idle_timeout_minutes": 60,
                     "max_devices_per_reservation": 2,
                     "devices": [
                         {

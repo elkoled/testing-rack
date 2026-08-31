@@ -6,7 +6,10 @@ from hypothesis import HealthCheck, settings
 from hypothesis.stateful import Bundle, RuleBasedStateMachine, invariant, rule
 from hypothesis.strategies import integers
 
-from app import ALLOWED_DURATIONS, Config, RackError, StateStore
+from app import Config, RackError, StateStore
+
+
+TEST_TIMEOUTS = (1, 10, 30, 60, 1440)
 
 
 class Clock:
@@ -30,8 +33,7 @@ class ReservationMachine(RuleBasedStateMachine):
                 {
                     "gateway_host": "gateway.invalid",
                     "gateway_port": 22,
-                    "default_lease_minutes": 60,
-                    "max_lease_minutes": 1440,
+                    "idle_timeout_minutes": 60,
                     "max_devices_per_reservation": 8,
                     "devices": [
                         {
@@ -77,7 +79,7 @@ class ReservationMachine(RuleBasedStateMachine):
     def reserve(self, user, count, duration, key_index):
         self.expire_model()
         name = f"user-{user}"
-        minutes = ALLOWED_DURATIONS[duration]
+        minutes = TEST_TIMEOUTS[duration]
         key = f"model-request-key-{key_index:03d}"
         request = (name, count, minutes)
         identity = (name, count)

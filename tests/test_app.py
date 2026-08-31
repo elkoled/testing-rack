@@ -30,8 +30,7 @@ class StoreTest(unittest.TestCase):
                 {
                     "gateway_host": "gateway.invalid",
                     "gateway_port": 22022,
-                    "default_lease_minutes": 60,
-                    "max_lease_minutes": 1440,
+                    "idle_timeout_minutes": 60,
                     "max_devices_per_reservation": 3,
                     "devices": [
                         {
@@ -306,8 +305,7 @@ class StoreTest(unittest.TestCase):
                 {
                     "gateway_host": self.config.gateway_host,
                     "gateway_port": self.config.gateway_port,
-                    "default_lease_minutes": self.config.default_lease_minutes,
-                    "max_lease_minutes": self.config.max_lease_minutes,
+                    "idle_timeout_minutes": self.config.idle_timeout_minutes,
                     "max_devices_per_reservation": self.config.max_devices_per_reservation,
                     "devices": devices,
                 }
@@ -327,8 +325,7 @@ class StoreTest(unittest.TestCase):
                         {
                             "gateway_host": self.config.gateway_host,
                             "gateway_port": self.config.gateway_port,
-                            "default_lease_minutes": self.config.default_lease_minutes,
-                            "max_lease_minutes": self.config.max_lease_minutes,
+                            "idle_timeout_minutes": self.config.idle_timeout_minutes,
                             "max_devices_per_reservation": self.config.max_devices_per_reservation,
                             "devices": devices,
                         }
@@ -374,8 +371,7 @@ class ScaleTest(unittest.TestCase):
                     {
                         "gateway_host": "gateway.invalid",
                         "gateway_port": 22,
-                        "default_lease_minutes": 60,
-                        "max_lease_minutes": 1440,
+                        "idle_timeout_minutes": 60,
                         "max_devices_per_reservation": 100,
                         "devices": [
                             {

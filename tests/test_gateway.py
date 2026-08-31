@@ -48,9 +48,7 @@ class GatewayTest(unittest.TestCase):
         self.assertEqual(request.call_count, 1)
         self.assertEqual(run.call_args.args[0][-1], "comma@comma-6f9f27a9")
         self.assertNotIn("-tt", run.call_args.args[0])
-        self.assertRegex(
-            stderr.getvalue(), r"^chestnut_rack · NUT001 · (59|60) min remaining\n$"
-        )
+        self.assertEqual(stderr.getvalue(), "chestnut_rack · NUT001\n")
 
     def test_hardware_action_is_scoped_and_delegated(self):
         target = {

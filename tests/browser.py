@@ -32,6 +32,7 @@ def run_case(browser, url: str, scenario: str, init_script: str, viewport: str) 
     try:
         page.goto(url, wait_until="networkidle")
         assert page.locator("#matrix .device").count() > 0
+        assert page.locator("#count option").count() == 11
         assert page.locator("#rack-name").inner_text() == "chestnut_rack"
         assert page.locator("#agent-help").inner_text() == (
             "Clanker API: /api/agent"
@@ -58,7 +59,7 @@ def run_case(browser, url: str, scenario: str, init_script: str, viewport: str) 
         assert commands[0].startswith("ssh rack@chestnut ")
         assert commands[0].endswith("-NUT001")
         assert commands[1].endswith("-NUT004")
-        assert "until idle release" in page.locator("#reservation-title").inner_text()
+        assert "min" not in page.locator("#reservation-title").inner_text()
         assert page.locator("#reserve-form").is_hidden()
         assert "loading" not in (
             page.locator("html").get_attribute("class") or ""
@@ -161,6 +162,9 @@ def run_interleavings(browser, url: str) -> None:
     name = "profiles-" + uuid.uuid4().hex[:8]
     reserve(p1, name)
     p1.locator("#reservation").wait_for(state="visible")
+    p2.reload(wait_until="networkidle")
+    assert p2.locator("#count option").count() == 10
+    assert p2.locator("#count option").last.get_attribute("value") == "9"
     reserve(p2, name)
     p2.locator("#message").filter(has_text="already has reservation").wait_for(
         state="visible"

@@ -3,13 +3,11 @@
 
 import argparse
 import json
-import math
 import os
 from pathlib import Path
 import subprocess
 import sys
 import threading
-import time
 import urllib.error
 import urllib.request
 import re
@@ -75,9 +73,8 @@ def main():
     )
     if target["health"] != "ready":
         print(f"Warning: {device} is {target['health']}.", file=sys.stderr)
-    minutes = max(0, math.ceil((target["expires_at"] - time.time()) / 60))
     print(
-        f"{target.get('display_name', 'testing-rack')} · {device} · {minutes} min remaining",
+        f"{target.get('display_name', 'testing-rack')} · {device}",
         file=sys.stderr,
     )
     if remote_command in {"gpu_power:on", "gpu_power:off", "ftdi:reset"}:

@@ -28,7 +28,6 @@ BASE58 = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
 CAPABILITY_RE = re.compile(
     r"(?:[1-9A-HJ-NP-Za-km-z]{12}|[0123456789ABCDEFGHJKMNPQRSTVWXYZ]{16}|[A-Za-z0-9_-]{22})$"
 )
-ALLOWED_DURATIONS = (60, 180, 360, 720, 1440)
 MAX_BODY = 8192
 
 
@@ -44,8 +43,6 @@ class Config:
     api_host: str
     gateway_host: str
     gateway_port: int
-    default_lease_minutes: int
-    max_lease_minutes: int
     idle_timeout_minutes: int
     max_devices_per_reservation: int
     devices: tuple[dict[str, str], ...]
@@ -59,13 +56,12 @@ class Config:
         required = {
             "gateway_host",
             "gateway_port",
-            "default_lease_minutes",
-            "max_lease_minutes",
+            "idle_timeout_minutes",
             "max_devices_per_reservation",
             "devices",
         }
         if not required.issubset(raw) or not set(raw).issubset(
-            required | {"display_name", "api_host", "idle_timeout_minutes"}
+            required | {"display_name", "api_host"}
         ):
             raise ValueError("config fields are invalid")
         display_name = raw.get("display_name", "testing-rack")
@@ -85,8 +81,7 @@ class Config:
         ):
             raise ValueError("gateway_port must be a valid TCP port")
         for key in (
-            "default_lease_minutes",
-            "max_lease_minutes",
+            "idle_timeout_minutes",
             "max_devices_per_reservation",
         ):
             if (
@@ -95,19 +90,7 @@ class Config:
                 or raw[key] < 1
             ):
                 raise ValueError(f"{key} must be a positive integer")
-        if raw["default_lease_minutes"] not in ALLOWED_DURATIONS or raw[
-            "max_lease_minutes"
-        ] > max(ALLOWED_DURATIONS):
-            raise ValueError("lease limits must use supported durations")
-        idle_timeout_minutes = raw.get(
-            "idle_timeout_minutes", raw["default_lease_minutes"]
-        )
-        if (
-            isinstance(idle_timeout_minutes, bool)
-            or not isinstance(idle_timeout_minutes, int)
-            or idle_timeout_minutes < 1
-        ):
-            raise ValueError("idle_timeout_minutes must be a positive integer")
+        idle_timeout_minutes = raw["idle_timeout_minutes"]
         if not isinstance(raw["devices"], list) or not raw["devices"]:
             raise ValueError("devices must be a non-empty list")
         names, serials, ftdi_serials, gpu_power_switches, devices = (
@@ -164,8 +147,6 @@ class Config:
             api_host,
             raw["gateway_host"],
             raw["gateway_port"],
-            raw["default_lease_minutes"],
-            raw["max_lease_minutes"],
             idle_timeout_minutes,
             raw["max_devices_per_reservation"],
             tuple(devices),
@@ -474,7 +455,6 @@ class StateStore:
             isinstance(duration, bool)
             or not isinstance(duration, int)
             or duration < 1
-            or duration > self.config.max_lease_minutes
         ):
             raise RackError(
                 400, "invalid_duration", "Idle timeout is invalid."

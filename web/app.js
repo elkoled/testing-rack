@@ -52,14 +52,6 @@ function requestKey() {
 const setText = (id, value) => {
   $(id).textContent = value ?? ""
 }
-const left = (deadline, now = Date.now() / 1000) => {
-  const minutes = Math.max(0, Math.ceil((deadline - now) / 60))
-  return minutes < 60
-    ? `${minutes} min`
-    : minutes % 60
-      ? `${Math.floor(minutes / 60)}h ${minutes % 60}m`
-      : `${minutes / 60}h`
-}
 async function api(path, options = {}) {
   const headers = { Accept: "application/json", ...(options.headers || {}) }
   if (ui.token) headers.Authorization = `Bearer ${ui.token}`
@@ -75,14 +67,8 @@ async function api(path, options = {}) {
   return data
 }
 function setup() {
-  if ($("count").options.length) return
-  for (const n of Array.from(
-    { length: ui.state.max_devices + 1 },
-    (_, index) => index,
-  ))
-    $("count").add(new Option(n, n))
+  if ($("count").onchange) return
   $("count").onchange = () => selectCount(Number($("count").value))
-  selectCount(1, false)
 }
 function buttonLabel() {
   const n = ui.selected.size
@@ -117,11 +103,7 @@ function card(device) {
     status = document.createElement("span")
   name.textContent = device.name
   status.textContent =
-    selected
-      ? "selected"
-      : state === "reserved"
-      ? `${device.owner} · ${left(device.expires_at)}`
-      : state
+    selected ? "selected" : state === "reserved" ? device.owner : state
   el.append(name, status)
   el.onclick = () => {
     if (ui.selected.has(device.name)) {
@@ -136,8 +118,21 @@ function card(device) {
   return el
 }
 function render() {
-  if (!ui.reservation && $("count").options.length)
-    selectCount(Number($("count").value || 1), false)
+  if (!ui.reservation) {
+    const available = readyNames().length
+    const desired = $("count").options.length
+      ? Number($("count").value)
+      : Math.min(1, available)
+    if ($("count").options.length !== available + 1)
+      $("count").replaceChildren(
+        ...Array.from(
+          { length: available + 1 },
+          (_, index) => new Option(index, index),
+        ),
+      )
+    $("count").value = String(Math.min(desired, available))
+    selectCount(Number($("count").value), false)
+  }
   const ready = ui.state.devices.filter((d) => d.state === "ready").length
   const offline = ui.state.devices.filter((d) => d.health === "offline").length
   const reserved = ui.state.devices.filter(
@@ -191,7 +186,7 @@ function show(result) {
   $("reserve-form").hidden = true
   setText(
     "reservation-title",
-    `${result.name} · ${result.devices.length} device${result.devices.length === 1 ? "" : "s"} · ${left(result.expires_at)} until idle release`,
+    `${result.name} · ${result.devices.length} device${result.devices.length === 1 ? "" : "s"}`,
   )
   const actions = [...new Set(Object.values(result.actions || {}).flat())]
   setText("command", result.access_commands.join("\n"))
