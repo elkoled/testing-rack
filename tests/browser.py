@@ -53,6 +53,13 @@ def run_case(browser, url: str, scenario: str, init_script: str, viewport: str) 
         assert "NUT" not in page.locator("#controls").inner_text()
         availability = page.locator("#availability").inner_text()
         assert "reserved ·" in availability and availability.endswith(" free")
+        assert page.evaluate(
+            """() => {
+              dispatchEvent(new Event('beforeunload'))
+              return getComputedStyle(document.body).visibility
+            }"""
+        ) == "hidden"
+        page.locator("html").evaluate("element => element.classList.remove('loading')")
         # Persistence must not depend on retaining the URL fragment. A plain visit
         # and another tab in the same browser profile must restore the lease.
         page.goto(url, wait_until="networkidle")

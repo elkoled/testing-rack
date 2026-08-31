@@ -1,8 +1,4 @@
 "use strict"
-const commonStyle = document.createElement("link")
-commonStyle.rel = "stylesheet"
-commonStyle.href = "/common.css"
-document.head.append(commonStyle)
 const preview = document.querySelector("#terminal-preview")
 if (preview) {
   const box = preview.closest(".terminal,details")
@@ -290,3 +286,6 @@ addEventListener("storage", (event) => {
     load()
   }
 })
+addEventListener("beforeunload", () =>
+  document.documentElement.classList.add("loading"),
+)
