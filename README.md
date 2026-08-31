@@ -17,3 +17,5 @@ Open <http://localhost:8765>. Run the complete lifecycle suite with:
 ```
 
 Production examples are in `deploy/`. Test details are in `TESTING.md`.
+
+Deploy or upgrade from the rack PC with `sudo ./deploy/install.sh`.

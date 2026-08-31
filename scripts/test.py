@@ -40,6 +40,7 @@ def main():
     process = None
     try:
         run("syntax", ["node", "--check", "web/app.js"])
+        run("installer-syntax", ["bash", "-n", "deploy/install.sh"])
         run("coverage-erase", [str(PY), "-m", "coverage", "erase"])
         coverage_env = {**os.environ, "TESTING_RACK_COVERAGE": "1"}
         run(
@@ -59,6 +60,7 @@ def main():
                 "tests/test_api.py",
                 "tests/test_gateway.py",
                 "tests/test_ssh.py",
+                "tests/test_warm.py",
             ],
             coverage_env,
         )

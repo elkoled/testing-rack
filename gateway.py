@@ -4,6 +4,7 @@
 import argparse
 import json
 import os
+from pathlib import Path
 import subprocess
 import sys
 import urllib.error
@@ -71,11 +72,34 @@ def main():
         )
         return
     else:
+        socket_path = Path("/var/lib/testing-rack-gateway/connections") / device
+        connection = []
+        if socket_path.exists():
+            try:
+                checked = subprocess.run(
+                    [
+                        "ssh",
+                        "-S",
+                        str(socket_path),
+                        "-O",
+                        "check",
+                        f"comma@comma-{target['serial']}",
+                    ],
+                    stdin=subprocess.DEVNULL,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    timeout=1,
+                )
+                if checked.returncode == 0:
+                    connection = ["-S", str(socket_path)]
+            except (OSError, subprocess.TimeoutExpired):
+                pass
         raise SystemExit(
             subprocess.run(
                 [
                     "ssh",
                     "-tt",
+                    *connection,
                     "-i",
                     args.identity,
                     "-o",
