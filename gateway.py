@@ -3,10 +3,12 @@
 
 import argparse
 import json
+import math
 import os
 from pathlib import Path
 import subprocess
 import sys
+import time
 import urllib.error
 import urllib.request
 import re
@@ -64,6 +66,8 @@ def main():
     )
     if target["health"] != "ready":
         print(f"Warning: {device} is {target['health']}.", file=sys.stderr)
+    minutes = max(0, math.ceil((target["expires_at"] - time.time()) / 60))
+    print(f"testing-rack · {device} · {minutes} min remaining", file=sys.stderr)
     if action:
         raise SystemExit(
             subprocess.run(

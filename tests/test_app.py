@@ -123,6 +123,10 @@ class StoreTest(unittest.TestCase):
             self.store.resolve(result["capability"], "NUT001")["serial"],
             "00000001",
         )
+        self.assertEqual(
+            self.store.resolve(result["capability"], "NUT001")["expires_at"],
+            result["expires_at"],
+        )
         resolved = self.store.resolve(result["capability"], "NUT001")
         self.assertEqual(resolved["ftdi_serial"], "FTDI0001")
         self.assertEqual(resolved["gpu_power_switch"], "gpu_001")

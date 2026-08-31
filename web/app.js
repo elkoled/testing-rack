@@ -116,12 +116,9 @@ function card(device) {
 }
 function render() {
   const ready = ui.state.devices.filter((d) => d.state === "ready").length
-  const yours = ui.reservation?.devices.length || 0
   setText(
     "availability",
-    yours
-      ? `${yours} yours · ${ready} free`
-      : `${ready} free · ${ui.state.devices.length - ready} reserved`,
+    `${ui.state.devices.length - ready} reserved · ${ready} free`,
   )
   $("matrix").replaceChildren(...ui.state.devices.map(card))
 }
@@ -138,6 +135,7 @@ async function load() {
       $("reserve-form").hidden = false
       history.replaceState(null, "", location.pathname)
     }
+    document.documentElement.classList.remove("restoring")
   } catch (error) {
     $("offline").hidden = false
     setText("offline", `${error.message} Retrying…`)
@@ -159,13 +157,12 @@ function show(result) {
     "reservation-title",
     `${result.devices.length} device${result.devices.length === 1 ? "" : "s"} · ${left(result.expires_at)} remaining`,
   )
-  setText("reservation-devices", result.devices.join("  ·  "))
   const actions = [...new Set(Object.values(result.actions || {}).flat())]
   $("controls").hidden = actions.length === 0
   setText(
     "controls",
     actions.length
-      ? `Optional actions: append ${actions.join(" · ")}`
+      ? `Append for actions: ${actions.join(" · ")}`
       : "",
   )
   setText("command", result.access_commands.join("\n"))
@@ -291,4 +288,10 @@ addEventListener("storage", (event) => {
     }
     load()
   }
+})
+addEventListener("pagehide", () => {
+  document.documentElement.classList.add("restoring")
+})
+addEventListener("pageshow", (event) => {
+  if (event.persisted) load()
 })

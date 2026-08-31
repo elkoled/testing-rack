@@ -556,7 +556,7 @@ class StateStore:
             self._persist(candidate)
             return {"released": lease["devices"]}
 
-    def resolve(self, capability: str, name: Any) -> dict[str, str]:
+    def resolve(self, capability: str, name: Any) -> dict[str, Any]:
         if not isinstance(name, str) or not NAME_RE.fullmatch(name):
             raise RackError(400, "invalid_device", "Device name is malformed.")
         with self.lock:
@@ -571,6 +571,7 @@ class StateStore:
                 "name": name,
                 "serial": device["serial"],
                 "health": self._effective_health(name),
+                "expires_at": lease["expires_at"],
             }
             for key in ("ftdi_serial", "gpu_power_switch"):
                 if key in device:
