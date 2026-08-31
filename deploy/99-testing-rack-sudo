@@ -1,1 +1,1 @@
-rack ALL=(root) NOPASSWD: /usr/bin/python3 /opt/testing-rack/actions.py
+rack ALL=(root) NOPASSWD: /usr/bin/python3 /opt/testing-rack/actions.py *
