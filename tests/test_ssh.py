@@ -84,13 +84,6 @@ class VirtualRackIntegrationTest(unittest.TestCase):
             ["ssh-keygen", "-q", "-t", "ed25519", "-N", "", "-f", str(self.host_key)],
             check=True,
         )
-        self.client_key = root / "xx_key"
-        self.other_key = root / "other_key"
-        for key in (self.client_key, self.other_key):
-            subprocess.run(
-                ["ssh-keygen", "-q", "-t", "ed25519", "-N", "", "-f", str(key)],
-                check=True,
-            )
         service_prefix = [sys.executable]
         if __import__("os").environ.get("TESTING_RACK_COVERAGE"):
             service_prefix += [
@@ -134,23 +127,6 @@ class VirtualRackIntegrationTest(unittest.TestCase):
         ]
         wait_port(23000, "localhost")
         wait_port(8875)
-        self.agent_socket = root / "agent.sock"
-        self.processes.append(
-            subprocess.Popen(
-                ["ssh-agent", "-D", "-a", str(self.agent_socket)],
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-            )
-        )
-        deadline = time.monotonic() + 5
-        while not self.agent_socket.exists() and time.monotonic() < deadline:
-            time.sleep(0.02)
-        subprocess.run(
-            ["ssh-add", str(self.client_key)],
-            check=True,
-            capture_output=True,
-            env={"SSH_AUTH_SOCK": str(self.agent_socket)},
-        )
         self.processes.append(
             subprocess.Popen(
                 [
@@ -162,8 +138,6 @@ class VirtualRackIntegrationTest(unittest.TestCase):
                     "23022",
                     "--host-key",
                     str(self.host_key),
-                    "--authorized-key",
-                    str(self.client_key) + ".pub",
                     "--service",
                     "http://localhost:8875",
                     "--virtual-device-port",
@@ -204,8 +178,7 @@ class VirtualRackIntegrationTest(unittest.TestCase):
         ) as response:
             return json.load(response)
 
-    def ssh(self, argument, identity=None, after_command=()):
-        identity_args = ["-i", str(identity)] if identity else []
+    def ssh(self, argument):
         return subprocess.run(
             [
                 "ssh",
@@ -216,49 +189,18 @@ class VirtualRackIntegrationTest(unittest.TestCase):
                 "-o",
                 "BatchMode=yes",
                 "-o",
-                "IdentityAgent=none",
-                "-o",
-                "IdentitiesOnly=yes",
-                "-o",
                 "StrictHostKeyChecking=no",
                 "-o",
                 "UserKnownHostsFile=/dev/null",
-                *identity_args,
                 "rack@localhost",
                 argument,
-                *after_command,
             ],
             capture_output=True,
             text=True,
             timeout=8,
         )
 
-    def ssh_tokens(self, tokens, agent=False):
-        return subprocess.run(
-            [
-                "ssh",
-                "-F",
-                "/dev/null",
-                "-p",
-                "23022",
-                "-o",
-                "BatchMode=yes",
-                "-o",
-                f"IdentityAgent={self.agent_socket if agent else 'none'}",
-                "-o",
-                f"IdentitiesOnly={'no' if agent else 'yes'}",
-                "-o",
-                "StrictHostKeyChecking=no",
-                "-o",
-                "UserKnownHostsFile=/dev/null",
-                *tokens,
-            ],
-            capture_output=True,
-            text=True,
-            timeout=8,
-        )
-
-    def test_openssh_authentication_matrix(self):
+    def test_keyless_access_and_release_closes_active_session(self):
         lease = self.request(
             "/api/reservations",
             "POST",
@@ -267,59 +209,35 @@ class VirtualRackIntegrationTest(unittest.TestCase):
         )
         selector = f"{lease['token']}-NUT001"
 
-        no_key = self.ssh_tokens(["rack@localhost", selector])
-        self.assertEqual(no_key.returncode, 255)
-        self.assertIn("Permission denied (publickey)", no_key.stderr)
+        connected = self.ssh(selector)
+        self.assertEqual(connected.returncode, 0, connected.stderr)
 
-        unrelated = self.ssh_tokens(
-            ["-i", str(self.other_key), "rack@localhost", selector]
-        )
-        self.assertEqual(unrelated.returncode, 255)
-
-        explicit = self.ssh_tokens(
-            ["-i", str(self.client_key), "rack@localhost", selector]
-        )
-        self.assertEqual(explicit.returncode, 0, explicit.stderr)
-
-        direct_style = self.ssh_tokens(
-            ["rack@localhost", "-i", str(self.client_key), selector]
-        )
-        self.assertEqual(direct_style.returncode, 0, direct_style.stderr)
-
-        coworker_failure = self.ssh_tokens(
-            ["rack@localhost", selector, "-i", str(self.client_key)]
-        )
-        self.assertEqual(coworker_failure.returncode, 255)
-        self.assertIn("Permission denied (publickey)", coworker_failure.stderr)
-
-        agent = self.ssh_tokens(["rack@localhost", selector], agent=True)
-        self.assertEqual(agent.returncode, 0, agent.stderr)
-
-        setenv = f"-oSetEnv=R={selector}"
-        setenv_explicit = self.ssh_tokens(
-            ["rack@localhost", setenv, "-i", str(self.client_key)]
-        )
-        self.assertEqual(setenv_explicit.returncode, 0, setenv_explicit.stderr)
-
-        setenv_agent = self.ssh_tokens(["rack@localhost", setenv], agent=True)
-        self.assertEqual(setenv_agent.returncode, 0, setenv_agent.stderr)
-
-        setenv_no_key = self.ssh_tokens(["rack@localhost", setenv])
-        self.assertEqual(setenv_no_key.returncode, 255)
-
-        setenv_command = self.ssh_tokens(
+        active = subprocess.Popen(
             [
+                "ssh",
+                "-F",
+                "/dev/null",
+                "-p",
+                "23022",
+                "-o",
+                "BatchMode=yes",
+                "-o",
+                "StrictHostKeyChecking=no",
+                "-o",
+                "UserKnownHostsFile=/dev/null",
                 "rack@localhost",
-                setenv,
-                "-i",
-                str(self.client_key),
-                "printf agent-ok",
-            ]
+                f"{selector} hold",
+            ],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
         )
-        self.assertEqual(setenv_command.returncode, 0, setenv_command.stderr)
-        self.assertEqual(
-            json.loads(setenv_command.stdout)["remote_command"], "printf agent-ok"
-        )
+        time.sleep(0.3)
+        self.assertIsNone(active.poll())
+        self.request("/api/reservation", "DELETE", token=lease["token"])
+        _, stderr = active.communicate(timeout=3)
+        self.assertEqual(active.returncode, 3)
+        self.assertIn("Reservation released or expired", stderr)
 
     def test_authorization_reachability_failure_and_release(self):
         lease = self.request(
@@ -332,7 +250,7 @@ class VirtualRackIntegrationTest(unittest.TestCase):
             key="virtual-integration-key-01",
         )
         capability = lease["token"]
-        healthy = self.ssh(f"{capability}-NUT001", self.client_key)
+        healthy = self.ssh(f"{capability}-NUT001")
         self.assertEqual(
             healthy.returncode,
             0,
@@ -342,13 +260,11 @@ class VirtualRackIntegrationTest(unittest.TestCase):
         self.assertEqual(payload["target_identity"]["serial"], "00000001")
         self.assertEqual(payload["target_identity"]["hardware"], "four")
 
-        commanded = self.ssh(
-            f"{capability}-NUT001 printf agent-ok", self.client_key
-        )
+        commanded = self.ssh(f"{capability}-NUT001 printf agent-ok")
         self.assertEqual(commanded.returncode, 0, commanded.stderr)
         self.assertEqual(json.loads(commanded.stdout)["remote_command"], "printf agent-ok")
 
-        unavailable = self.ssh(f"{capability}-NUT002", self.client_key)
+        unavailable = self.ssh(f"{capability}-NUT002")
         self.assertEqual(unavailable.returncode, 4)
         self.assertIn("reservation remains active", unavailable.stderr)
         self.assertEqual(
@@ -356,18 +272,16 @@ class VirtualRackIntegrationTest(unittest.TestCase):
             ["NUT001", "NUT002"],
         )
 
-        outside_scope = self.ssh(f"{capability}-NUT003", self.client_key)
+        outside_scope = self.ssh(f"{capability}-NUT003")
         self.assertEqual(outside_scope.returncode, 3)
         self.assertIn("not part of reservation", outside_scope.stderr)
-        random_token = self.ssh("7Km3P9xQvT2w-NUT001", self.client_key)
+        random_token = self.ssh("7Km3P9xQvT2w-NUT001")
         self.assertEqual(random_token.returncode, 3)
-        leading_hyphen = self.ssh(
-            "r.-AAAAAAAAAAAAAAAAAAAAA.NUT001", self.client_key
-        )
+        leading_hyphen = self.ssh("r.-AAAAAAAAAAAAAAAAAAAAA.NUT001")
         self.assertEqual(leading_hyphen.returncode, 3, leading_hyphen.stderr)
 
         self.request("/api/reservation", "DELETE", token=capability)
-        released = self.ssh(f"{capability}-NUT001", self.client_key)
+        released = self.ssh(f"{capability}-NUT001")
         self.assertEqual(released.returncode, 3)
         self.assertIn("released, or expired", released.stderr)
 

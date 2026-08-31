@@ -1,6 +1,7 @@
 import io
 import os
 import sys
+import threading
 import time
 import unittest
 from unittest import mock
@@ -11,15 +12,42 @@ import gateway
 class GatewayTest(unittest.TestCase):
     def test_active_session_heartbeat_refreshes_reservation(self):
         stop = mock.Mock()
+        revoked = threading.Event()
         stop.wait.side_effect = [False, True]
         with mock.patch.object(gateway, "request") as request:
-            gateway.keep_active(stop, "http://service", "token", "NUT001")
+            gateway.keep_active(
+                stop, revoked, "http://service", "token", "NUT001"
+            )
         request.assert_called_once_with(
             "http://service",
             "/api/gateway/resolve",
             "token",
             {"device": "NUT001"},
         )
+        self.assertFalse(revoked.is_set())
+
+    def test_failed_heartbeat_revokes_session(self):
+        stop = mock.Mock()
+        revoked = threading.Event()
+        stop.wait.return_value = False
+        with mock.patch.object(
+            gateway, "request", side_effect=SystemExit("released")
+        ):
+            gateway.keep_active(
+                stop, revoked, "http://service", "token", "NUT001"
+            )
+        self.assertTrue(revoked.is_set())
+
+    def test_revocation_terminates_forwarded_process(self):
+        process = mock.Mock()
+        process.poll.return_value = None
+        process.wait.return_value = -15
+        revoked = threading.Event()
+        revoked.set()
+        with mock.patch.object(gateway.subprocess, "Popen", return_value=process):
+            result = gateway.forward(["ssh"], revoked)
+        self.assertEqual(result, 3)
+        process.terminate.assert_called_once_with()
 
     def test_final_target_uses_comma_serial(self):
         target = {
@@ -39,7 +67,7 @@ class GatewayTest(unittest.TestCase):
                 clear=False,
             ),
             mock.patch.object(gateway, "request", return_value=target) as request,
-            mock.patch.object(gateway.subprocess, "run", return_value=completed) as run,
+            mock.patch.object(gateway, "forward", return_value=0) as run,
             mock.patch.object(sys, "stderr", io.StringIO()) as stderr,
             self.assertRaises(SystemExit) as stopped,
         ):
@@ -99,7 +127,7 @@ class GatewayTest(unittest.TestCase):
                 clear=False,
             ),
             mock.patch.object(gateway, "request", return_value=target),
-            mock.patch.object(gateway.subprocess, "run", return_value=completed) as run,
+            mock.patch.object(gateway, "forward", return_value=7) as run,
             mock.patch.object(sys, "stderr", io.StringIO()),
             self.assertRaises(SystemExit) as stopped,
         ):
@@ -129,42 +157,13 @@ class GatewayTest(unittest.TestCase):
                 clear=False,
             ),
             mock.patch.object(gateway, "request", return_value=target),
-            mock.patch.object(gateway.subprocess, "run", return_value=completed) as run,
+            mock.patch.object(gateway, "forward", return_value=0) as run,
             mock.patch.object(sys, "stderr", io.StringIO()),
             self.assertRaises(SystemExit) as stopped,
         ):
             gateway.main()
         self.assertEqual(stopped.exception.code, 0)
         self.assertEqual(run.call_args.args[0][-1], "comma@comma-6f9f27a9")
-
-    def test_environment_selector_preserves_remote_command(self):
-        target = {
-            "name": "NUT001",
-            "serial": "6f9f27a9",
-            "health": "ready",
-            "expires_at": time.time() + 3600,
-            "display_name": "chestnut_rack",
-        }
-        completed = mock.Mock(returncode=0)
-        with (
-            mock.patch.object(sys, "argv", ["gateway.py"]),
-            mock.patch.dict(
-                os.environ,
-                {
-                    "R": "7Km3P9xQvT2w-NUT001",
-                    "SSH_ORIGINAL_COMMAND": "uname -a",
-                },
-                clear=False,
-            ),
-            mock.patch.object(gateway, "request", return_value=target),
-            mock.patch.object(gateway.subprocess, "run", return_value=completed) as run,
-            mock.patch.object(sys, "stderr", io.StringIO()),
-            self.assertRaises(SystemExit) as stopped,
-        ):
-            gateway.main()
-        self.assertEqual(stopped.exception.code, 0)
-        self.assertEqual(run.call_args.args[0][-1], "uname -a")
-
 
 if __name__ == "__main__":
     unittest.main()

@@ -4,7 +4,6 @@ set -euo pipefail
 root=$(cd "$(dirname "$0")/.." && pwd)
 config=${CONFIG:-$root/config.json}
 device_key=${DEVICE_KEY:-}
-client_key=${CLIENT_PUBLIC_KEY:-}
 known_hosts=${KNOWN_HOSTS:-}
 
 if ! getent group testing-rack >/dev/null
@@ -19,7 +18,7 @@ if ! id rack >/dev/null 2>&1
 then
   useradd --system --gid testing-rack --home-dir /var/lib/testing-rack-gateway --create-home --shell /bin/bash rack
 fi
-passwd -l rack >/dev/null
+passwd -d rack >/dev/null
 
 install -d -o root -g root -m 0755 /opt/testing-rack /opt/testing-rack/web
 install -d -o root -g root -m 0755 /etc/testing-rack
@@ -42,15 +41,7 @@ then
   echo "Set DEVICE_KEY for the gateway-only comma SSH key." >&2
   exit 1
 fi
-if [[ -n "$client_key" ]]
-then
-  install -o rack -g testing-rack -m 0600 "$client_key" /var/lib/testing-rack-gateway/.ssh/authorized_keys
-fi
-if [[ ! -s /var/lib/testing-rack-gateway/.ssh/authorized_keys ]]
-then
-  echo "Set CLIENT_PUBLIC_KEY for the company client key." >&2
-  exit 1
-fi
+rm -f /var/lib/testing-rack-gateway/.ssh/authorized_keys
 if [[ -n "$known_hosts" ]]
 then
   install -o rack -g testing-rack -m 0600 "$known_hosts" /var/lib/testing-rack-gateway/.ssh/known_hosts

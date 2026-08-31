@@ -584,10 +584,7 @@ class StateStore:
         devices = sorted(
             lease["devices"], key=lambda name: int(NAME_RE.fullmatch(name).group(1))
         )
-        commands = [
-            f"{prefix} -oSetEnv=R={capability}-{name}"
-            for name in devices
-        ]
+        commands = [f"{prefix} {capability}-{name}" for name in devices]
         actions = {}
         for name in devices:
             device = next(item for item in self.config.devices if item["name"] == name)

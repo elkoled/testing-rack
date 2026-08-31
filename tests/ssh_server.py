@@ -21,17 +21,8 @@ DEVICE_RE = re.compile(r"NUT[0-9]+$")
 
 
 class RestrictedServer(asyncssh.SSHServer):
-    def __init__(self, authorized_key):
-        self.authorized_key = authorized_key
-
     def begin_auth(self, username: str) -> bool:
-        return True
-
-    def public_key_auth_supported(self) -> bool:
-        return True
-
-    def validate_public_key(self, username: str, key) -> bool:
-        return username == "rack" and key == self.authorized_key
+        return username != "rack"
 
 
 def api_request(base: str, path: str, capability: str, body=None):
@@ -94,13 +85,7 @@ async def handle(
     services: list[str],
     virtual_device_port: int | None,
 ) -> None:
-    access = process.env.get("R")
-    if access:
-        selector = access
-        remote_command = process.command or ""
-        separator = bool(remote_command)
-    else:
-        selector, separator, remote_command = (process.command or "").partition(" ")
+    selector, separator, remote_command = (process.command or "").partition(" ")
     parts = [selector] if selector else []
     modern = (
         re.fullmatch(r"([1-9A-HJ-NP-Za-km-z]{12})-(NUT[0-9]+)", parts[0])
@@ -135,6 +120,16 @@ async def handle(
         process.exit(3)
         return
     reservation, target = result
+    if remote_command == "hold":
+        while True:
+            await asyncio.sleep(0.1)
+            _, error = await asyncio.to_thread(
+                resolve, services, capability, device
+            )
+            if error:
+                process.stderr.write("Reservation released or expired.\n")
+                process.exit(3)
+                return
     identity = None
     if virtual_device_port is not None:
         try:
@@ -173,9 +168,8 @@ async def handle(
 
 
 async def run(args) -> None:
-    authorized_key = asyncssh.read_public_key(args.authorized_key)
     await asyncssh.create_server(
-        lambda: RestrictedServer(authorized_key),
+        RestrictedServer,
         args.bind,
         args.port,
         server_host_keys=[str(args.host_key)],
@@ -195,7 +189,6 @@ def main() -> None:
     parser.add_argument("--bind", default="localhost")
     parser.add_argument("--port", type=int, default=22022)
     parser.add_argument("--host-key", type=Path, required=True)
-    parser.add_argument("--authorized-key", type=Path, required=True)
     parser.add_argument("--service", action="append", default=[])
     parser.add_argument("--virtual-device-port", type=int)
     args = parser.parse_args()

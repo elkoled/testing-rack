@@ -37,12 +37,34 @@ def request(base: str, path: str, capability: str, body=None):
         raise SystemExit(f"Reservation unavailable or expired: {exc}") from None
 
 
-def keep_active(stop: threading.Event, service: str, capability: str, device: str):
-    while not stop.wait(60):
+def keep_active(
+    stop: threading.Event,
+    revoked: threading.Event,
+    service: str,
+    capability: str,
+    device: str,
+):
+    while not stop.wait(2):
         try:
             request(service, "/api/gateway/resolve", capability, {"device": device})
         except SystemExit:
+            revoked.set()
             return
+
+
+def forward(command: list[str], revoked: threading.Event) -> int:
+    process = subprocess.Popen(command)
+    while process.poll() is None:
+        if revoked.wait(0.1):
+            process.terminate()
+            try:
+                process.wait(2)
+            except subprocess.TimeoutExpired:
+                process.kill()
+                process.wait()
+            print("Reservation released or expired.", file=sys.stderr)
+            return 3
+    return process.returncode
 
 
 def main():
@@ -52,31 +74,22 @@ def main():
     parser.add_argument("--authorize-only", action="store_true")
     args = parser.parse_args()
     original = os.environ.get("SSH_ORIGINAL_COMMAND", "")
-    access = os.environ.get("R")
-    if access:
-        match = DIRECT_RE.fullmatch(access)
-        if not match or match.group(3) is not None:
-            raise SystemExit("Invalid rack access selector.")
-        capability, device, _ = match.groups()
-        remote_command = original or None
-        previous = legacy = None
+    match, previous, legacy = (
+        DIRECT_RE.fullmatch(original),
+        PREVIOUS_RE.fullmatch(original),
+        LEGACY_RE.fullmatch(original),
+    )
+    if match:
+        capability, device, remote_command = match.groups()
+    elif previous:
+        device, *groups = previous.groups()
+        capability = "".join(groups)
+        remote_command = None
+    elif legacy:
+        capability, device = legacy.groups()
+        remote_command = None
     else:
-        match, previous, legacy = (
-            DIRECT_RE.fullmatch(original),
-            PREVIOUS_RE.fullmatch(original),
-            LEGACY_RE.fullmatch(original),
-        )
-        if match:
-            capability, device, remote_command = match.groups()
-        elif previous:
-            device, *groups = previous.groups()
-            capability = "".join(groups)
-            remote_command = None
-        elif legacy:
-            capability, device = legacy.groups()
-            remote_command = None
-        else:
-            raise SystemExit("Usage: ssh rack@chestnut 7Km3P9xQvT2w-NUT001")
+        raise SystemExit("Usage: ssh rack@chestnut 7Km3P9xQvT2w-NUT001")
     if remote_command and re.fullmatch(r"-i\s+\S+", remote_command):
         remote_command = None
     target = request(
@@ -136,14 +149,15 @@ def main():
             except (OSError, subprocess.TimeoutExpired):
                 pass
         stop = threading.Event()
+        revoked = threading.Event()
         heartbeat = threading.Thread(
             target=keep_active,
-            args=(stop, args.service, capability, device),
+            args=(stop, revoked, args.service, capability, device),
             daemon=True,
         )
         heartbeat.start()
         try:
-            completed = subprocess.run(
+            result = forward(
                 [
                     "ssh",
                     *connection,
@@ -155,12 +169,13 @@ def main():
                     "ClearAllForwardings=yes",
                     f"comma@comma-{target['serial']}",
                     *([remote_command] if remote_command else []),
-                ]
+                ],
+                revoked,
             )
         finally:
             stop.set()
             heartbeat.join(timeout=1)
-        raise SystemExit(completed.returncode)
+        raise SystemExit(result)
 
 
 if __name__ == "__main__":
