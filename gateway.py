@@ -52,10 +52,27 @@ def keep_active(
             return
 
 
-def forward(command: list[str], revoked: threading.Event) -> int:
+def close_connection(socket_path: Path, destination: str) -> None:
+    subprocess.run(
+        ["ssh", "-S", str(socket_path), "-O", "exit", destination],
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        timeout=2,
+        check=False,
+    )
+
+
+def forward(
+    command: list[str],
+    revoked: threading.Event,
+    control: tuple[Path, str] | None = None,
+) -> int:
     process = subprocess.Popen(command)
     while process.poll() is None:
         if revoked.wait(0.1):
+            if control:
+                close_connection(*control)
             process.terminate()
             try:
                 process.wait(2)
@@ -128,6 +145,8 @@ def main():
     else:
         socket_path = Path("/var/lib/testing-rack-gateway/connections") / device
         connection = []
+        control = None
+        destination = f"comma@comma-{target['serial']}"
         if socket_path.exists():
             try:
                 checked = subprocess.run(
@@ -137,7 +156,7 @@ def main():
                         str(socket_path),
                         "-O",
                         "check",
-                        f"comma@comma-{target['serial']}",
+                        destination,
                     ],
                     stdin=subprocess.DEVNULL,
                     stdout=subprocess.DEVNULL,
@@ -146,6 +165,7 @@ def main():
                 )
                 if checked.returncode == 0:
                     connection = ["-S", str(socket_path)]
+                    control = (socket_path, destination)
             except (OSError, subprocess.TimeoutExpired):
                 pass
         stop = threading.Event()
@@ -167,10 +187,11 @@ def main():
                     "IdentitiesOnly=yes",
                     "-o",
                     "ClearAllForwardings=yes",
-                    f"comma@comma-{target['serial']}",
+                    destination,
                     *([remote_command] if remote_command else []),
                 ],
                 revoked,
+                control,
             )
         finally:
             stop.set()

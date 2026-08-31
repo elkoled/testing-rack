@@ -44,9 +44,14 @@ class GatewayTest(unittest.TestCase):
         process.wait.return_value = -15
         revoked = threading.Event()
         revoked.set()
-        with mock.patch.object(gateway.subprocess, "Popen", return_value=process):
-            result = gateway.forward(["ssh"], revoked)
+        control = (gateway.Path("/tmp/control"), "comma@comma-00000001")
+        with (
+            mock.patch.object(gateway.subprocess, "Popen", return_value=process),
+            mock.patch.object(gateway, "close_connection") as close,
+        ):
+            result = gateway.forward(["ssh"], revoked, control)
         self.assertEqual(result, 3)
+        close.assert_called_once_with(*control)
         process.terminate.assert_called_once_with()
 
     def test_final_target_uses_comma_serial(self):
