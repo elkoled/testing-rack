@@ -156,23 +156,16 @@ function show(result) {
     "reservation-title",
     `${result.devices.length} device${result.devices.length === 1 ? "" : "s"} · ${left(result.expires_at)} remaining`,
   )
-  const actions = [...new Set(Object.values(result.actions || {}).flat())]
-  $("controls").hidden = actions.length === 0
-  setText(
-    "controls",
-    actions.length
-      ? `Append for actions: ${actions.join(" · ")}`
-      : "",
-  )
   setText("command", result.access_commands.join("\n"))
-  setText("copy", "Copy context")
+  setText("context", contextText())
+  setText("copy-ssh", "Copy SSH")
+  setText("copy-context", "Copy context")
 }
 function contextText() {
   const result = ui.reservation
   const actions = [...new Set(Object.values(result.actions || {}).flat())]
   const lines = [
     `${ui.state.display_name} · ${result.devices.length} device${result.devices.length === 1 ? "" : "s"} · ${left(result.expires_at)} remaining`,
-    ...result.access_commands,
   ]
   if (actions.length)
     lines.push(`Actions: append ${actions.join(" | ")}`)
@@ -231,14 +224,13 @@ $("reserve-form").onsubmit = async (event) => {
     buttonLabel()
   }
 }
-$("copy").onclick = async () => {
-  const original = $("copy").textContent
-  const text = contextText()
+async function copyText(buttonId, text, sourceId) {
+  const original = $(buttonId).textContent
   try {
     if (!navigator.clipboard?.writeText) throw Error("Clipboard API unavailable")
     await navigator.clipboard.writeText(text)
-    setText("copy", "Copied")
-    setTimeout(() => setText("copy", original), 1000)
+    setText(buttonId, "Copied")
+    setTimeout(() => setText(buttonId, original), 1000)
   } catch {
     const field = document.createElement("textarea")
     field.value = text
@@ -250,19 +242,23 @@ $("copy").onclick = async () => {
     const copied = document.execCommand("copy")
     field.remove()
     if (copied) {
-      setText("copy", "Copied")
+      setText(buttonId, "Copied")
       setText("message", "")
-      setTimeout(() => setText("copy", original), 1000)
+      setTimeout(() => setText(buttonId, original), 1000)
     } else {
       const selection = getSelection()
       const range = document.createRange()
-      range.selectNodeContents($("command"))
+      range.selectNodeContents($(sourceId))
       selection.removeAllRanges()
       selection.addRange(range)
-      setText("message", "SSH selected. Press Ctrl+C or Command+C.")
+      setText("message", "Text selected. Press Ctrl+C or Command+C.")
     }
   }
 }
+$("copy-ssh").onclick = () =>
+  copyText("copy-ssh", $("command").textContent, "command")
+$("copy-context").onclick = () =>
+  copyText("copy-context", $("context").textContent, "context")
 $("release").onclick = async () => {
   if (!confirm("Release all devices in this reservation?")) return
   try {
