@@ -66,14 +66,10 @@ class StoreTest(unittest.TestCase):
         self.assertEqual(caught.exception.status, 409)
         self.assertEqual(len(self.store.state["leases"]), 1)
 
-    def test_user_facing_devices_are_numerically_sorted(self):
+    def test_released_low_devices_are_reused_first(self):
         first = self.reserve(1)
         self.store.release(first["capability"])
         result = self.store.reserve("alex", 3, 60, "second-request-key")
-        self.assertEqual(
-            self.store.state["leases"][0]["devices"],
-            ["NUT002", "NUT003", "NUT001"],
-        )
         self.assertEqual(result["devices"], ["NUT001", "NUT002", "NUT003"])
         self.assertTrue(result["access_commands"][0].endswith("-NUT001"))
         self.assertTrue(result["access_commands"][1].endswith("-NUT002"))

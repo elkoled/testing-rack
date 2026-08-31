@@ -285,9 +285,6 @@ class StateStore:
         if not expired:
             return False
         state["leases"] = [x for x in state["leases"] if x["expires_at"] > now]
-        for lease in expired:
-            for name in lease["devices"]:
-                state["last_released"][name] = now
         live_keys = {x["idempotency_key"] for x in state["leases"]}
         state["idempotency"] = {
             k: v for k, v in state["idempotency"].items() if k in live_keys
@@ -476,12 +473,7 @@ class StateStore:
                 if d["name"] not in occupied
                 and self._effective_health(d["name"]) == "ready"
             ]
-            ready.sort(
-                key=lambda name: (
-                    self.state["last_released"].get(name, 0),
-                    int(NAME_RE.fullmatch(name).group(1)),
-                )
-            )
+            ready.sort(key=lambda name: int(NAME_RE.fullmatch(name).group(1)))
             if len(ready) < count:
                 raise RackError(
                     409,
@@ -553,9 +545,6 @@ class StateStore:
                 x for x in candidate["leases"] if x["display_id"] != lease["display_id"]
             ]
             candidate["idempotency"].pop(lease["idempotency_key"], None)
-            now = self.now()
-            for name in lease["devices"]:
-                candidate["last_released"][name] = now
             self._persist(candidate)
             return {
                 "released": sorted(

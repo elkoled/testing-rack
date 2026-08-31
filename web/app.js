@@ -135,10 +135,11 @@ async function load() {
       $("reserve-form").hidden = false
       history.replaceState(null, "", location.pathname)
     }
-    document.documentElement.classList.toggle("restoring", Boolean(ui.reservation))
+    document.documentElement.classList.remove("loading")
   } catch (error) {
     $("offline").hidden = false
     setText("offline", `${error.message} Retrying…`)
+    document.documentElement.classList.remove("loading")
   }
 }
 function show(result) {
@@ -186,7 +187,6 @@ async function refresh() {
     rememberCapability(null)
     $("reservation").hidden = true
     $("reserve-form").hidden = false
-    document.documentElement.classList.remove("restoring")
     history.replaceState(null, "", location.pathname)
   }
 }
@@ -285,15 +285,8 @@ addEventListener("storage", (event) => {
     if (!event.newValue) {
       $("reservation").hidden = true
       $("reserve-form").hidden = false
-      document.documentElement.classList.remove("restoring")
       history.replaceState(null, "", location.pathname)
     }
     load()
   }
-})
-addEventListener("pagehide", () => {
-  document.documentElement.classList.add("restoring")
-})
-addEventListener("pageshow", (event) => {
-  if (event.persisted) load()
 })
