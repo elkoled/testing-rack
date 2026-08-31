@@ -6,7 +6,6 @@ import json
 import os
 import subprocess
 import sys
-import time
 import urllib.error
 import urllib.request
 import re
@@ -55,11 +54,6 @@ def main():
         capability, device = legacy.groups()
     else:
         raise SystemExit("Usage: ssh rack@chestnut.comma.internal 7Km3P9xQvT2w-NUT001")
-    reservation = request(args.service, "/api/reservations/current", capability)
-    if device not in reservation["devices"]:
-        raise SystemExit(
-            f"Access denied: {device} is not in reservation {reservation['display_id']}."
-        )
     target = request(
         args.service, "/api/gateway/resolve", capability, {"device": device}
     )
@@ -70,24 +64,13 @@ def main():
             json.dumps(
                 {
                     "status": "authorized",
-                    "reservation": reservation["display_id"],
                     "device": device,
-                    "expires_at": reservation["expires_at"],
                     "mode": "hardware-disabled",
                 }
             )
         )
         return
     else:
-        remaining = max(0, int((reservation["expires_at"] - time.time()) / 60))
-        serial_console = "available" if target.get("ftdi_serial") else "not installed"
-        gpu_power = "available" if target.get("gpu_power_switch") else "not installed"
-        print(
-            f"testing-rack · {device} · {remaining}m remaining\n"
-            f"Device shell · serial console {serial_console} · GPU power {gpu_power}\n"
-            "Connecting...",
-            flush=True,
-        )
         raise SystemExit(
             subprocess.run(
                 [
@@ -99,6 +82,12 @@ def main():
                     "IdentitiesOnly=yes",
                     "-o",
                     "ClearAllForwardings=yes",
+                    "-o",
+                    "ControlMaster=auto",
+                    "-o",
+                    "ControlPersist=3600",
+                    "-o",
+                    "ControlPath=/var/lib/testing-rack-gateway/.ssh/device-%C",
                     f"comma@comma-{target['serial']}",
                 ]
             ).returncode

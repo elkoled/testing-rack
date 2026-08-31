@@ -27,13 +27,15 @@ class GatewayTest(unittest.TestCase):
                 {"SSH_ORIGINAL_COMMAND": "7Km3P9xQvT2w-NUT001"},
                 clear=False,
             ),
-            mock.patch.object(gateway, "request", side_effect=[reservation, target]),
+            mock.patch.object(gateway, "request", return_value=target) as request,
             mock.patch.object(gateway.subprocess, "run", return_value=completed) as run,
             self.assertRaises(SystemExit) as stopped,
         ):
             gateway.main()
         self.assertEqual(stopped.exception.code, 0)
+        self.assertEqual(request.call_count, 1)
         self.assertEqual(run.call_args.args[0][-1], "comma@comma-6f9f27a9")
+        self.assertIn("ControlMaster=auto", run.call_args.args[0])
 
 
 if __name__ == "__main__":
