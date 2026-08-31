@@ -80,10 +80,11 @@ class ReservationMachine(RuleBasedStateMachine):
         minutes = ALLOWED_DURATIONS[duration]
         key = f"model-request-key-{key_index:03d}"
         request = (name, count, minutes)
+        identity = (name, count)
         expected_error = None
         if key in self.keys:
             lease = self.model[self.keys[key]]
-            if lease["request"] != request:
+            if lease["request"] != identity:
                 expected_error = "idempotency_conflict"
         elif any(x["name"].casefold() == name.casefold() for x in self.model.values()):
             expected_error = "reservation_exists"
@@ -114,7 +115,7 @@ class ReservationMachine(RuleBasedStateMachine):
             "devices": result["devices"],
             "expires": self.clock.value + minutes * 60,
             "key": key,
-            "request": request,
+            "request": identity,
         }
         self.keys[key] = result["token"]
         return result["token"]

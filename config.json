@@ -5,6 +5,7 @@
   "gateway_port": 22,
   "default_lease_minutes": 60,
   "max_lease_minutes": 1440,
+  "idle_timeout_minutes": 60,
   "max_devices_per_reservation": 10,
   "devices": [
     {"name":"NUT001","device_type":"four","serial":"178e6b20","ftdi_serial":"DK0CFV87","gpu_power_switch":"upper_1"},

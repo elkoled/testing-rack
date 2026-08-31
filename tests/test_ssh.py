@@ -204,7 +204,6 @@ class VirtualRackIntegrationTest(unittest.TestCase):
             {
                 "name": "virtual-alex",
                 "count": 2,
-                "hours": 1,
             },
             key="virtual-integration-key-01",
         )

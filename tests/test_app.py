@@ -84,6 +84,29 @@ class StoreTest(unittest.TestCase):
         result = self.reserve(1)
         self.assertEqual(result["devices"], ["NUT002"])
 
+    def test_exact_device_selection_is_atomic(self):
+        result = self.store.reserve(
+            "alex", 2, 60, "exact-devices-key", ["NUT003", "NUT001"]
+        )
+        self.assertEqual(result["devices"], ["NUT001", "NUT003"])
+        with self.assertRaises(RackError) as caught:
+            self.store.reserve(
+                "mira", 1, 60, "unavailable-device-key", ["NUT003"]
+            )
+        self.assertEqual(caught.exception.code, "devices_unavailable")
+
+    def test_gateway_use_refreshes_idle_timeout(self):
+        result = self.reserve(1)
+        self.clock.value += 3500
+        refreshed = self.store.resolve(result["token"], "NUT001")
+        self.assertEqual(refreshed["expires_at"], self.clock.value + 3600)
+        self.assertEqual(self.reserve(1)["token"], result["token"])
+        self.clock.value += 3599
+        self.assertEqual(self.store.current(result["token"])["devices"], ["NUT001"])
+        self.clock.value += 2
+        with self.assertRaises(RackError):
+            self.store.current(result["token"])
+
     def test_idempotency_returns_same_capability_without_second_lease(self):
         first = self.reserve(2)
         second = self.reserve(2)
@@ -92,7 +115,7 @@ class StoreTest(unittest.TestCase):
 
     def test_idempotency_key_rejects_different_request(self):
         self.reserve(1)
-        for args in (("mira", 1, 60), ("alex", 2, 60), ("alex", 1, 180)):
+        for args in (("mira", 1, 60), ("alex", 2, 60)):
             with self.subTest(args=args), self.assertRaises(RackError) as caught:
                 self.store.reserve(*args, "abcdefghijklmnop")
             self.assertEqual(caught.exception.code, "idempotency_conflict")

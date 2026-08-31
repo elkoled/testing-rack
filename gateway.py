@@ -8,6 +8,7 @@ import os
 from pathlib import Path
 import subprocess
 import sys
+import threading
 import time
 import urllib.error
 import urllib.request
@@ -36,6 +37,14 @@ def request(base: str, path: str, capability: str, body=None):
             return json.load(response)
     except (urllib.error.URLError, json.JSONDecodeError) as exc:
         raise SystemExit(f"Reservation unavailable or expired: {exc}") from None
+
+
+def keep_active(stop: threading.Event, service: str, capability: str, device: str):
+    while not stop.wait(60):
+        try:
+            request(service, "/api/gateway/resolve", capability, {"device": device})
+        except SystemExit:
+            return
 
 
 def main():
@@ -118,8 +127,15 @@ def main():
                     connection = ["-S", str(socket_path)]
             except (OSError, subprocess.TimeoutExpired):
                 pass
-        raise SystemExit(
-            subprocess.run(
+        stop = threading.Event()
+        heartbeat = threading.Thread(
+            target=keep_active,
+            args=(stop, args.service, capability, device),
+            daemon=True,
+        )
+        heartbeat.start()
+        try:
+            completed = subprocess.run(
                 [
                     "ssh",
                     *connection,
@@ -132,8 +148,11 @@ def main():
                     f"comma@comma-{target['serial']}",
                     *([remote_command] if remote_command else []),
                 ]
-            ).returncode
-        )
+            )
+        finally:
+            stop.set()
+            heartbeat.join(timeout=1)
+        raise SystemExit(completed.returncode)
 
 
 if __name__ == "__main__":

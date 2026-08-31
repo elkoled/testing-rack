@@ -46,6 +46,7 @@ class Config:
     gateway_port: int
     default_lease_minutes: int
     max_lease_minutes: int
+    idle_timeout_minutes: int
     max_devices_per_reservation: int
     devices: tuple[dict[str, str], ...]
 
@@ -64,7 +65,7 @@ class Config:
             "devices",
         }
         if not required.issubset(raw) or not set(raw).issubset(
-            required | {"display_name", "api_host"}
+            required | {"display_name", "api_host", "idle_timeout_minutes"}
         ):
             raise ValueError("config fields are invalid")
         display_name = raw.get("display_name", "testing-rack")
@@ -98,6 +99,15 @@ class Config:
             "max_lease_minutes"
         ] > max(ALLOWED_DURATIONS):
             raise ValueError("lease limits must use supported durations")
+        idle_timeout_minutes = raw.get(
+            "idle_timeout_minutes", raw["default_lease_minutes"]
+        )
+        if (
+            isinstance(idle_timeout_minutes, bool)
+            or not isinstance(idle_timeout_minutes, int)
+            or idle_timeout_minutes < 1
+        ):
+            raise ValueError("idle_timeout_minutes must be a positive integer")
         if not isinstance(raw["devices"], list) or not raw["devices"]:
             raise ValueError("devices must be a non-empty list")
         names, serials, ftdi_serials, gpu_power_switches, devices = (
@@ -156,6 +166,7 @@ class Config:
             raw["gateway_port"],
             raw["default_lease_minutes"],
             raw["max_lease_minutes"],
+            idle_timeout_minutes,
             raw["max_devices_per_reservation"],
             tuple(devices),
         )
@@ -410,16 +421,11 @@ class StateStore:
             return {
                 "now": now,
                 "devices": devices,
-                "hours": [
-                    x // 60
-                    for x in ALLOWED_DURATIONS
-                    if x <= self.config.max_lease_minutes
-                ],
                 "max_devices": self.config.max_devices_per_reservation,
-                "default_hours": self.config.default_lease_minutes // 60,
-            "gateway_host": self.config.gateway_host,
-            "api_host": self.config.api_host,
-            "display_name": self.config.display_name,
+                "idle_timeout_minutes": self.config.idle_timeout_minutes,
+                "gateway_host": self.config.gateway_host,
+                "api_host": self.config.api_host,
+                "display_name": self.config.display_name,
             }
 
     def device(self, name: str) -> dict[str, Any]:
@@ -434,7 +440,12 @@ class StateStore:
         }
 
     def reserve(
-        self, name: Any, count: Any, duration: Any, key: Any
+        self,
+        name: Any,
+        count: Any,
+        duration: Any,
+        key: Any,
+        requested_devices: Any = None,
     ) -> dict[str, Any]:
         name = _validate_name(name)
         if (
@@ -457,6 +468,22 @@ class StateStore:
             )
         if not isinstance(key, str) or not IDEMPOTENCY_RE.fullmatch(key):
             raise RackError(400, "invalid_key", "Key is malformed.")
+        configured = {device["name"] for device in self.config.devices}
+        if requested_devices is not None:
+            if (
+                not isinstance(requested_devices, list)
+                or len(requested_devices) != count
+                or any(not isinstance(item, str) for item in requested_devices)
+                or len(set(requested_devices)) != count
+                or not set(requested_devices) <= configured
+            ):
+                raise RackError(
+                    400, "invalid_devices", "Selected devices are invalid."
+                )
+            requested_devices = sorted(
+                requested_devices,
+                key=lambda item: int(NAME_RE.fullmatch(item).group(1)),
+            )
         with self.lock:
             self._expire_and_persist_if_needed()
             capability = self._capability(key)
@@ -475,13 +502,13 @@ class StateStore:
                         "state_inconsistent",
                         "Reservation state is inconsistent; refusing allocation.",
                     )
-                original_duration = round(
-                    (lease["expires_at"] - lease["created_at"]) / 60
-                )
                 if (
                     lease["name"] != name
                     or len(lease["devices"]) != count
-                    or original_duration != duration
+                    or (
+                        requested_devices is not None
+                        and lease["devices"] != requested_devices
+                    )
                 ):
                     raise RackError(
                         409,
@@ -519,6 +546,16 @@ class StateStore:
                 and self._effective_health(d["name"], connection_health) == "ready"
             ]
             ready.sort(key=lambda name: int(NAME_RE.fullmatch(name).group(1)))
+            if requested_devices is not None:
+                unavailable = [item for item in requested_devices if item not in ready]
+                if unavailable:
+                    raise RackError(
+                        409,
+                        "devices_unavailable",
+                        "One or more selected devices are no longer available.",
+                        devices=unavailable,
+                    )
+                ready = requested_devices
             if len(ready) < count:
                 raise RackError(
                     409,
@@ -608,6 +645,15 @@ class StateStore:
                 raise RackError(
                     403, "not_reserved", "That device is not part of this reservation."
                 )
+            candidate = copy.deepcopy(self.state)
+            refreshed = next(
+                item
+                for item in candidate["leases"]
+                if item["display_id"] == lease["display_id"]
+            )
+            refreshed["expires_at"] = self.now() + self.config.idle_timeout_minutes * 60
+            self._persist(candidate)
+            lease = refreshed
             device = next(d for d in self.config.devices if d["name"] == name)
             result = {
                 "name": name,
@@ -739,7 +785,6 @@ class Handler(BaseHTTPRequestHandler):
                             "json": {
                                 "name": "your name",
                                 "count": 1,
-                                "hours": 1,
                             },
                         },
                         "result": "Save token and run a command from access_commands.",
@@ -748,7 +793,9 @@ class Handler(BaseHTTPRequestHandler):
                             "for example: <access_command> 'uname -a'. Standard input "
                             "is streamed."
                         ),
-                        "limits": "Read hours and max_devices from GET /api/state.",
+                        "selection": "Use count for automatic selection or replace count with devices, for example: [\"NUT001\",\"NUT004\"].",
+                        "timeout": "The reservation releases after idle_timeout_minutes without gateway use. Active SSH sessions refresh it.",
+                        "limits": "Read max_devices and idle_timeout_minutes from GET /api/state.",
                         "read": {
                             "method": "GET",
                             "path": "/api/reservation",
@@ -790,25 +837,25 @@ class Handler(BaseHTTPRequestHandler):
         try:
             path, body = urlparse(self.path).path, self._body()
             if path == "/api/reservations":
-                allowed = {"name", "count", "hours"}
-                if set(body) != allowed:
+                fields = set(body)
+                if fields == {"name", "count"}:
+                    count, requested_devices = body["count"], None
+                elif fields == {"name", "devices"} and isinstance(
+                    body["devices"], list
+                ):
+                    count, requested_devices = len(body["devices"]), body["devices"]
+                else:
                     raise RackError(
                         400, "invalid_fields", "Reservation fields are invalid."
-                    )
-                hours = body["hours"]
-                if isinstance(hours, bool) or hours not in {
-                    value // 60 for value in ALLOWED_DURATIONS
-                }:
-                    raise RackError(
-                        400, "invalid_hours", "Choose one of the offered hours."
                     )
                 self._json(
                     201,
                     self.store.reserve(
                         body["name"],
-                        body["count"],
-                        hours * 60,
+                        count,
+                        self.store.config.idle_timeout_minutes,
                         self.headers.get("Idempotency-Key", ""),
+                        requested_devices,
                     ),
                 )
             elif path == "/api/gateway/resolve":

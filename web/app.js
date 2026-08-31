@@ -30,6 +30,7 @@ const savedToken = storedToken()
 const ui = {
   state: null,
   reservation: null,
+  selected: new Set(),
   token: savedToken || fragmentToken,
   busy: false,
   fallback:
@@ -74,43 +75,72 @@ async function api(path, options = {}) {
   return data
 }
 function setup() {
-  if ($("duration").options.length) return
+  if ($("count").options.length) return
   for (const n of Array.from(
     { length: ui.state.max_devices },
     (_, index) => index + 1,
   ))
     $("count").add(new Option(n, n))
-  for (const hours of ui.state.hours)
-    $("duration").add(
-      new Option(
-        hours === 1 ? "1 hour" : `${hours} hours`,
-        hours,
-        hours === ui.state.default_hours,
-        hours === ui.state.default_hours,
-      ),
-    )
-  $("count").onchange = buttonLabel
-  buttonLabel()
+  $("count").onchange = () => selectCount(Number($("count").value))
+  selectCount(1, false)
 }
 function buttonLabel() {
-  const n = Number($("count").value || 1)
+  const n = ui.selected.size
   setText("reserve", `Reserve ${n} device${n === 1 ? "" : "s"}`)
+  $("reserve").disabled = n === 0
+  setText("selection", `Selected: ${[...ui.selected].join(" · ")}`)
+  $("selection").hidden = ui.reservation !== null
+}
+function readyNames() {
+  return ui.state.devices
+    .filter((device) => device.state === "ready" && device.health === "ready")
+    .map((device) => device.name)
+}
+function selectCount(count, rerender = true) {
+  const ready = readyNames()
+  ui.selected = new Set([...ui.selected].filter((name) => ready.includes(name)))
+  while (ui.selected.size > count) ui.selected.delete([...ui.selected].at(-1))
+  for (const name of ready) {
+    if (ui.selected.size >= count) break
+    ui.selected.add(name)
+  }
+  $("count").value = String(ui.selected.size || count)
+  buttonLabel()
+  if (rerender) render()
 }
 function card(device) {
-  const el = document.createElement("article")
+  const el = document.createElement("button")
+  el.type = "button"
   const state = device.health === "ready" ? device.state : device.health
-  el.className = `device ${state}`
+  const selected = state === "ready" && ui.selected.has(device.name)
+  el.className = `device ${selected ? "selected" : state}`
+  el.disabled = state !== "ready" || ui.reservation !== null
   const name = document.createElement("b"),
     status = document.createElement("span")
   name.textContent = device.name
   status.textContent =
-    state === "reserved"
+    selected
+      ? "selected"
+      : state === "reserved"
       ? `${device.owner} · ${left(device.expires_at)}`
       : state
   el.append(name, status)
+  el.onclick = () => {
+    if (ui.selected.has(device.name)) {
+      if (ui.selected.size === 1) return
+      ui.selected.delete(device.name)
+    } else {
+      ui.selected.add(device.name)
+    }
+    $("count").value = String(ui.selected.size)
+    buttonLabel()
+    render()
+  }
   return el
 }
 function render() {
+  if (!ui.reservation && $("count").options.length)
+    selectCount(Number($("count").value || 1), false)
   const ready = ui.state.devices.filter((d) => d.state === "ready").length
   const offline = ui.state.devices.filter((d) => d.health === "offline").length
   const reserved = ui.state.devices.filter(
@@ -152,6 +182,7 @@ async function load() {
 }
 function show(result) {
   ui.reservation = result
+  $("selection").hidden = true
   if (ui.state) render()
   rememberToken(result.token)
   ui.fallback = null
@@ -164,7 +195,7 @@ function show(result) {
   $("reserve-form").hidden = true
   setText(
     "reservation-title",
-    `${result.name} · ${result.devices.length} device${result.devices.length === 1 ? "" : "s"} · ${left(result.expires_at)} remaining`,
+    `${result.name} · ${result.devices.length} device${result.devices.length === 1 ? "" : "s"} · ${left(result.expires_at)} until idle release`,
   )
   const actions = [...new Set(Object.values(result.actions || {}).flat())]
   setText("command", result.access_commands.join("\n"))
@@ -208,8 +239,7 @@ $("reserve-form").onsubmit = async (event) => {
       method: "POST",
       body: JSON.stringify({
         name,
-        count: Number($("count").value),
-        hours: Number($("duration").value),
+        devices: [...ui.selected],
       }),
       headers: { "Idempotency-Key": requestKey() },
     })
@@ -266,6 +296,7 @@ $("release").onclick = async () => {
     await api("/api/reservation", { method: "DELETE" })
     ui.token = null
     ui.reservation = null
+    ui.selected.clear()
     rememberToken(null)
     history.replaceState(null, "", location.pathname)
     $("reservation").hidden = true

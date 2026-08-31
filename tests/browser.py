@@ -38,16 +38,22 @@ def run_case(browser, url: str, scenario: str, init_script: str, viewport: str) 
         )
         name = f"chrome-{scenario[:8]}-{viewport[:1]}-{uuid.uuid4().hex[:6]}"
         page.locator("#name").fill(name)
-        page.locator("#count").select_option("1")
-        page.locator("#duration").select_option("1")
+        page.locator("#count").select_option("2")
+        assert page.locator("#matrix .selected").count() == 2
+        page.locator("#matrix .device", has_text="NUT002").click()
+        page.locator("#matrix .device", has_text="NUT004").click()
+        assert page.locator("#selection").inner_text() == "Selected: NUT001 · NUT004"
         started = time.monotonic()
         page.locator("#reserve").click()
         page.locator("#reservation").wait_for(state="visible")
         assert page.locator("#reservation-title").inner_text().startswith(f"{name} · ")
         command = page.locator("#command").inner_text()
-        assert command.startswith(
-            "ssh rack@chestnut "
-        ) and command.endswith(tuple(f"-NUT{i:03d}" for i in range(1, 1000)))
+        commands = command.splitlines()
+        assert len(commands) == 2
+        assert commands[0].startswith("ssh rack@chestnut ")
+        assert commands[0].endswith("-NUT001")
+        assert commands[1].endswith("-NUT004")
+        assert "until idle release" in page.locator("#reservation-title").inner_text()
         assert page.locator("#reserve-form").is_hidden()
         assert "loading" not in (
             page.locator("html").get_attribute("class") or ""
@@ -110,7 +116,6 @@ def run_case(browser, url: str, scenario: str, init_script: str, viewport: str) 
 def reserve(page, name: str) -> None:
     page.locator("#name").fill(name)
     page.locator("#count").select_option("1")
-    page.locator("#duration").select_option("1")
     page.locator("#reserve").click()
 
 
@@ -132,7 +137,6 @@ def run_interleavings(browser, url: str) -> None:
     for page in (a, b):
         page.locator("#name").fill(name)
         page.locator("#count").select_option("1")
-        page.locator("#duration").select_option("1")
     a.locator("#reserve").click(no_wait_after=True)
     b.locator("#reserve").click(no_wait_after=True)
     a.locator("#reservation").wait_for(state="visible", timeout=10000)

@@ -116,7 +116,7 @@ class HttpApiTest(unittest.TestCase):
         self.assertEqual(instructions["reserve"]["json"]["count"], 1)
         self.assertEqual(
             set(instructions["reserve"]["json"]),
-            {"name", "count", "hours"},
+            {"name", "count"},
         )
         self.assertIn("Idempotency-Key", instructions["reserve"]["headers"])
         self.assertEqual(instructions["read"]["path"], "/api/reservation")
@@ -142,7 +142,6 @@ class HttpApiTest(unittest.TestCase):
             {
                 "name": "alex",
                 "count": 1,
-                "hours": 1,
             }
         )
         self.assert_json_error(
@@ -157,7 +156,6 @@ class HttpApiTest(unittest.TestCase):
         body = {
             "name": "limit-test",
             "count": 10,
-            "hours": 24,
         }
         status, _, response = self.request(
             "POST",
@@ -171,31 +169,46 @@ class HttpApiTest(unittest.TestCase):
         self.assertEqual(status, 201)
         reservation = json.loads(response)
         self.assertEqual(len(reservation["devices"]), 10)
-        self.assertGreaterEqual(reservation["expires_at"] - time.time(), 86390)
+        self.assertGreaterEqual(reservation["expires_at"] - time.time(), 3590)
         status, _, _ = self.request(
             "DELETE",
             "/api/reservation",
             headers={"Authorization": f"Bearer {reservation['token']}"},
         )
         self.assertEqual(status, 200)
-        for field, value, code in (
-            ("count", 11, "invalid_count"),
-            ("hours", 48, "invalid_hours"),
-        ):
-            invalid = {**body, field: value}
-            self.assert_json_error(
-                self.request(
-                    "POST",
-                    "/api/reservations",
-                    json.dumps(invalid),
-                    {
-                        "Content-Type": "application/json",
-                        "Idempotency-Key": f"invalid-{field}-key",
-                    },
-                ),
-                400,
-                code,
-            )
+        invalid = {**body, "count": 11}
+        self.assert_json_error(
+            self.request(
+                "POST",
+                "/api/reservations",
+                json.dumps(invalid),
+                {
+                    "Content-Type": "application/json",
+                    "Idempotency-Key": "invalid-count-key",
+                },
+            ),
+            400,
+            "invalid_count",
+        )
+
+    def test_exact_device_selection(self):
+        status, _, response = self.request(
+            "POST",
+            "/api/reservations",
+            json.dumps({"name": "exact-test", "devices": ["NUT004", "NUT002"]}),
+            {
+                "Content-Type": "application/json",
+                "Idempotency-Key": "http-exact-devices-001",
+            },
+        )
+        self.assertEqual(status, 201)
+        reservation = json.loads(response)
+        self.assertEqual(reservation["devices"], ["NUT002", "NUT004"])
+        self.request(
+            "DELETE",
+            "/api/reservation",
+            headers={"Authorization": f"Bearer {reservation['token']}"},
+        )
 
     def test_malformed_and_bounded_bodies(self):
         cases = [

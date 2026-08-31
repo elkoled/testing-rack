@@ -9,6 +9,18 @@ import gateway
 
 
 class GatewayTest(unittest.TestCase):
+    def test_active_session_heartbeat_refreshes_reservation(self):
+        stop = mock.Mock()
+        stop.wait.side_effect = [False, True]
+        with mock.patch.object(gateway, "request") as request:
+            gateway.keep_active(stop, "http://service", "token", "NUT001")
+        request.assert_called_once_with(
+            "http://service",
+            "/api/gateway/resolve",
+            "token",
+            {"device": "NUT001"},
+        )
+
     def test_final_target_uses_comma_serial(self):
         target = {
             "name": "NUT001",
