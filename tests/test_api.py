@@ -116,7 +116,7 @@ class HttpApiTest(unittest.TestCase):
         self.assertEqual(instructions["reserve"]["json"]["count"], 1)
         self.assertEqual(
             set(instructions["reserve"]["json"]),
-            {"name", "count", "duration_minutes", "idempotency_key"},
+            {"name", "count", "hours", "key"},
         )
         self.assertEqual(instructions["release"]["method"], "DELETE")
         text = body.decode()
@@ -139,8 +139,8 @@ class HttpApiTest(unittest.TestCase):
             {
                 "name": "alex",
                 "count": 1,
-                "duration_minutes": 60,
-                "idempotency_key": "http-content-key-001",
+                "hours": 1,
+                "key": "http-content-key-001",
             }
         )
         self.assert_json_error(
@@ -155,8 +155,8 @@ class HttpApiTest(unittest.TestCase):
         body = {
             "name": "limit-test",
             "count": 10,
-            "duration_minutes": 1440,
-            "idempotency_key": "http-maximum-key-001",
+            "hours": 24,
+            "key": "http-maximum-key-001",
         }
         status, _, response = self.request(
             "POST",
@@ -176,9 +176,9 @@ class HttpApiTest(unittest.TestCase):
         self.assertEqual(status, 200)
         for field, value, code in (
             ("count", 11, "invalid_count"),
-            ("duration_minutes", 2880, "invalid_duration"),
+            ("hours", 48, "invalid_hours"),
         ):
-            invalid = {**body, field: value, "idempotency_key": f"invalid-{field}-key"}
+            invalid = {**body, field: value, "key": f"invalid-{field}-key"}
             self.assert_json_error(
                 self.request(
                     "POST",

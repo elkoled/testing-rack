@@ -39,7 +39,7 @@ const ui = {
 }
 if (!savedCapability && fragmentCapability)
   rememberCapability(fragmentCapability)
-function idempotencyKey() {
+function requestKey() {
   if (globalThis.crypto?.getRandomValues) {
     const bytes = new Uint8Array(16)
     crypto.getRandomValues(bytes)
@@ -81,13 +81,13 @@ function setup() {
     (_, index) => index + 1,
   ))
     $("count").add(new Option(n, n))
-  for (const minutes of ui.state.durations)
+  for (const hours of ui.state.hours)
     $("duration").add(
       new Option(
-        minutes === 60 ? "1 hour" : `${minutes / 60} hours`,
-        minutes,
-        minutes === ui.state.default_duration,
-        minutes === ui.state.default_duration,
+        hours === 1 ? "1 hour" : `${hours} hours`,
+        hours,
+        hours === ui.state.default_hours,
+        hours === ui.state.default_hours,
       ),
     )
   $("count").onchange = buttonLabel
@@ -210,8 +210,8 @@ $("reserve-form").onsubmit = async (event) => {
       body: JSON.stringify({
         name,
         count: Number($("count").value),
-        duration_minutes: Number($("duration").value),
-        idempotency_key: idempotencyKey(),
+        hours: Number($("duration").value),
+        key: requestKey(),
       }),
     })
     ui.capability = result.capability

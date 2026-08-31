@@ -202,8 +202,8 @@ class VirtualRackIntegrationTest(unittest.TestCase):
             {
                 "name": "virtual-alex",
                 "count": 2,
-                "duration_minutes": 60,
-                "idempotency_key": "virtual-integration-key-01",
+                "hours": 1,
+                "key": "virtual-integration-key-01",
             },
         )
         capability = lease["capability"]

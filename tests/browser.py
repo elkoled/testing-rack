@@ -39,7 +39,7 @@ def run_case(browser, url: str, scenario: str, init_script: str, viewport: str) 
         name = f"chrome-{scenario[:8]}-{viewport[:1]}-{uuid.uuid4().hex[:6]}"
         page.locator("#name").fill(name)
         page.locator("#count").select_option("1")
-        page.locator("#duration").select_option("60")
+        page.locator("#duration").select_option("1")
         started = time.monotonic()
         page.locator("#reserve").click()
         page.locator("#reservation").wait_for(state="visible")
@@ -99,7 +99,7 @@ def run_case(browser, url: str, scenario: str, init_script: str, viewport: str) 
 def reserve(page, name: str) -> None:
     page.locator("#name").fill(name)
     page.locator("#count").select_option("1")
-    page.locator("#duration").select_option("60")
+    page.locator("#duration").select_option("1")
     page.locator("#reserve").click()
 
 
@@ -121,7 +121,7 @@ def run_interleavings(browser, url: str) -> None:
     for page in (a, b):
         page.locator("#name").fill(name)
         page.locator("#count").select_option("1")
-        page.locator("#duration").select_option("60")
+        page.locator("#duration").select_option("1")
     a.locator("#reserve").click(no_wait_after=True)
     b.locator("#reserve").click(no_wait_after=True)
     a.locator("#reservation").wait_for(state="visible", timeout=10000)

@@ -410,11 +410,13 @@ class StateStore:
             return {
                 "now": now,
                 "devices": devices,
-                "durations": [
-                    x for x in ALLOWED_DURATIONS if x <= self.config.max_lease_minutes
+                "hours": [
+                    x // 60
+                    for x in ALLOWED_DURATIONS
+                    if x <= self.config.max_lease_minutes
                 ],
                 "max_devices": self.config.max_devices_per_reservation,
-                "default_duration": self.config.default_lease_minutes,
+                "default_hours": self.config.default_lease_minutes // 60,
             "gateway_host": self.config.gateway_host,
             "api_host": self.config.api_host,
             "display_name": self.config.display_name,
@@ -454,9 +456,7 @@ class StateStore:
                 400, "invalid_duration", "Choose one of the offered durations."
             )
         if not isinstance(key, str) or not IDEMPOTENCY_RE.fullmatch(key):
-            raise RackError(
-                400, "invalid_idempotency_key", "Idempotency key is malformed."
-            )
+            raise RackError(400, "invalid_key", "Key is malformed.")
         with self.lock:
             self._expire_and_persist_if_needed()
             capability = self._capability(key)
@@ -728,12 +728,12 @@ class Handler(BaseHTTPRequestHandler):
                             "json": {
                                 "name": "your name",
                                 "count": 1,
-                                "duration_minutes": 60,
-                                "idempotency_key": "unique string of at least 16 characters",
+                                "hours": 1,
+                                "key": "unique string of at least 16 characters",
                             },
                         },
                         "result": "Run a command from access_commands.",
-                        "limits": "Read durations and max_devices from GET /api/state.",
+                        "limits": "Read hours and max_devices from GET /api/state.",
                         "release": {
                             "method": "DELETE",
                             "path": "/api/reservations/current",
@@ -770,18 +770,25 @@ class Handler(BaseHTTPRequestHandler):
         try:
             path, body = urlparse(self.path).path, self._body()
             if path == "/api/reservations":
-                allowed = {"name", "count", "duration_minutes", "idempotency_key"}
+                allowed = {"name", "count", "hours", "key"}
                 if set(body) != allowed:
                     raise RackError(
                         400, "invalid_fields", "Reservation fields are invalid."
+                    )
+                hours = body["hours"]
+                if isinstance(hours, bool) or hours not in {
+                    value // 60 for value in ALLOWED_DURATIONS
+                }:
+                    raise RackError(
+                        400, "invalid_hours", "Choose one of the offered hours."
                     )
                 self._json(
                     201,
                     self.store.reserve(
                         body["name"],
                         body["count"],
-                        body["duration_minutes"],
-                        body["idempotency_key"],
+                        hours * 60,
+                        body["key"],
                     ),
                 )
             elif path == "/api/gateway/resolve":
