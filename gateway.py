@@ -63,6 +63,10 @@ def close_connection(socket_path: Path, destination: str) -> None:
     )
 
 
+def terminal_option() -> str:
+    return "-t" if sys.stdin.isatty() else "-T"
+
+
 def forward(
     command: list[str],
     revoked: threading.Event,
@@ -181,6 +185,7 @@ def main():
                 [
                     "ssh",
                     *connection,
+                    terminal_option(),
                     "-i",
                     args.identity,
                     "-o",
