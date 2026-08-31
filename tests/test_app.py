@@ -68,7 +68,7 @@ class StoreTest(unittest.TestCase):
 
     def test_released_low_devices_are_reused_first(self):
         first = self.reserve(1)
-        self.store.release(first["capability"])
+        self.store.release(first["token"])
         result = self.store.reserve("alex", 3, 60, "second-request-key")
         self.assertEqual(result["devices"], ["NUT001", "NUT002", "NUT003"])
         self.assertTrue(result["access_commands"][0].endswith("-NUT001"))
@@ -138,24 +138,24 @@ class StoreTest(unittest.TestCase):
         )
         self.assertNotIn("action_commands", result)
         self.assertEqual(
-            self.store.resolve(result["capability"], "NUT001")["serial"],
+            self.store.resolve(result["token"], "NUT001")["serial"],
             "00000001",
         )
         self.assertEqual(
-            self.store.resolve(result["capability"], "NUT001")["expires_at"],
+            self.store.resolve(result["token"], "NUT001")["expires_at"],
             result["expires_at"],
         )
-        resolved = self.store.resolve(result["capability"], "NUT001")
+        resolved = self.store.resolve(result["token"], "NUT001")
         self.assertEqual(resolved["ftdi_serial"], "FTDI0001")
         self.assertEqual(resolved["gpu_power_switch"], "gpu_001")
         with self.assertRaises(RackError) as caught:
-            self.store.resolve(result["capability"], "NUT003")
+            self.store.resolve(result["token"], "NUT003")
         self.assertEqual(caught.exception.status, 403)
         self.assertEqual(
-            self.store.release(result["capability"])["released"], ["NUT001", "NUT002"]
+            self.store.release(result["token"])["released"], ["NUT001", "NUT002"]
         )
         with self.assertRaises(RackError):
-            self.store.current(result["capability"])
+            self.store.current(result["token"])
 
     def test_access_argument_can_never_be_parsed_as_an_ssh_option(self):
         result = self.reserve(1)
@@ -170,13 +170,13 @@ class StoreTest(unittest.TestCase):
         state = self.store.public_state()
         self.assertEqual(sum(d["state"] == "ready" for d in state["devices"]), 3)
         with self.assertRaises(RackError):
-            self.store.resolve(result["capability"], "NUT001")
+            self.store.resolve(result["token"], "NUT001")
 
     def test_restart_preserves_active_reservation(self):
         result = self.reserve(2)
         restarted = StateStore(self.config, self.state, self.secret, self.clock)
         self.assertEqual(
-            restarted.current(result["capability"])["devices"], result["devices"]
+            restarted.current(result["token"])["devices"], result["devices"]
         )
 
     def test_failed_atomic_commit_never_changes_memory_or_current_disk_state(self):
@@ -207,7 +207,7 @@ class StoreTest(unittest.TestCase):
         def contender():
             barrier.wait()
             try:
-                self.store.release(result["capability"])
+                self.store.release(result["token"])
                 outcomes.append("released")
             except RackError as exc:
                 outcomes.append(exc.code)
@@ -218,7 +218,7 @@ class StoreTest(unittest.TestCase):
         for thread in threads:
             thread.join()
         self.assertEqual(outcomes.count("released"), 1)
-        self.assertEqual(outcomes.count("invalid_capability"), 7)
+        self.assertEqual(outcomes.count("invalid_token"), 7)
         self.assertEqual(self.store.state["leases"], [])
 
     def test_corrupt_current_fails_closed_instead_of_loading_stale_backup(self):

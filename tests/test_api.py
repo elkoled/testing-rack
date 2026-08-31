@@ -116,8 +116,10 @@ class HttpApiTest(unittest.TestCase):
         self.assertEqual(instructions["reserve"]["json"]["count"], 1)
         self.assertEqual(
             set(instructions["reserve"]["json"]),
-            {"name", "count", "hours", "key"},
+            {"name", "count", "hours"},
         )
+        self.assertIn("Idempotency-Key", instructions["reserve"]["headers"])
+        self.assertEqual(instructions["read"]["path"], "/api/reservation")
         self.assertEqual(instructions["release"]["method"], "DELETE")
         text = body.decode()
         self.assertNotIn("serial", text)
@@ -140,7 +142,6 @@ class HttpApiTest(unittest.TestCase):
                 "name": "alex",
                 "count": 1,
                 "hours": 1,
-                "key": "http-content-key-001",
             }
         )
         self.assert_json_error(
@@ -156,13 +157,15 @@ class HttpApiTest(unittest.TestCase):
             "name": "limit-test",
             "count": 10,
             "hours": 24,
-            "key": "http-maximum-key-001",
         }
         status, _, response = self.request(
             "POST",
             "/api/reservations",
             json.dumps(body),
-            {"Content-Type": "application/json"},
+            {
+                "Content-Type": "application/json",
+                "Idempotency-Key": "http-maximum-key-001",
+            },
         )
         self.assertEqual(status, 201)
         reservation = json.loads(response)
@@ -170,21 +173,24 @@ class HttpApiTest(unittest.TestCase):
         self.assertGreaterEqual(reservation["expires_at"] - time.time(), 86390)
         status, _, _ = self.request(
             "DELETE",
-            "/api/reservations/current",
-            headers={"X-Testing-Rack-Capability": reservation["capability"]},
+            "/api/reservation",
+            headers={"Authorization": f"Bearer {reservation['token']}"},
         )
         self.assertEqual(status, 200)
         for field, value, code in (
             ("count", 11, "invalid_count"),
             ("hours", 48, "invalid_hours"),
         ):
-            invalid = {**body, field: value, "key": f"invalid-{field}-key"}
+            invalid = {**body, field: value}
             self.assert_json_error(
                 self.request(
                     "POST",
                     "/api/reservations",
                     json.dumps(invalid),
-                    {"Content-Type": "application/json"},
+                    {
+                        "Content-Type": "application/json",
+                        "Idempotency-Key": f"invalid-{field}-key",
+                    },
                 ),
                 400,
                 code,
@@ -210,7 +216,7 @@ class HttpApiTest(unittest.TestCase):
                     code,
                 )
 
-    def test_paths_and_capability_boundaries(self):
+    def test_paths_and_token_boundaries(self):
         status, _, body = self.request("GET", "/api/devices/NUT001")
         self.assertEqual(status, 200)
         public_device = json.loads(body)
@@ -221,12 +227,12 @@ class HttpApiTest(unittest.TestCase):
             self.request("GET", "/api/devices/NUT999"), 404, "not_found"
         )
         self.assert_json_error(
-            self.request("GET", "/api/reservations/current"), 403, "invalid_capability"
+            self.request("GET", "/api/reservation"), 403, "invalid_token"
         )
         self.assert_json_error(
-            self.request("DELETE", "/api/reservations/current"),
+            self.request("DELETE", "/api/reservation"),
             403,
-            "invalid_capability",
+            "invalid_token",
         )
         self.assert_json_error(self.request("GET", "/../config.json"), 404, "not_found")
 

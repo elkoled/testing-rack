@@ -75,6 +75,17 @@ def run_case(browser, url: str, scenario: str, init_script: str, viewport: str) 
         second.locator("#reservation").wait_for(state="visible")
         assert second.locator("#command").inner_text() == command
         second.close()
+        # Existing reservations survive the one-time credential naming migration.
+        page.evaluate(
+            """() => {
+              localStorage.setItem('testing-rack-capability', localStorage.getItem('testing-rack-token'))
+              localStorage.removeItem('testing-rack-token')
+            }"""
+        )
+        page.goto(url, wait_until="networkidle")
+        page.locator("#reservation").wait_for(state="visible")
+        assert page.locator("#command").inner_text() == command
+        assert page.evaluate("localStorage.getItem('testing-rack-capability')") is None
         page.once("dialog", lambda dialog: dialog.accept())
         page.locator("#release").click()
         page.locator("#reservation").wait_for(state="hidden")
@@ -82,12 +93,12 @@ def run_case(browser, url: str, scenario: str, init_script: str, viewport: str) 
         assert "loading" not in (
             page.locator("html").get_attribute("class") or ""
         ).split()
-        assert page.evaluate("localStorage.getItem('testing-rack-capability')") is None
+        assert page.evaluate("localStorage.getItem('testing-rack-token')") is None
         # A stale local credential must self-heal rather than trapping the browser.
-        page.evaluate("localStorage.setItem('testing-rack-capability','111111111111')")
+        page.evaluate("localStorage.setItem('testing-rack-token','111111111111')")
         page.reload(wait_until="networkidle")
         assert page.locator("#reserve-form").is_visible()
-        assert page.evaluate("localStorage.getItem('testing-rack-capability')") is None
+        assert page.evaluate("localStorage.getItem('testing-rack-token')") is None
         assert not errors, errors
         print(
             f"PASS chrome {scenario} {viewport} {int((time.monotonic() - started) * 1000)}ms"

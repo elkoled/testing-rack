@@ -6,39 +6,38 @@ if (preview) {
   target.remove()
 }
 const $ = (id) => document.getElementById(id),
-  CAPABILITY_KEY = "testing-rack-capability"
-const storedCapability = () => {
+  TOKEN_KEY = "testing-rack-token",
+  LEGACY_KEY = ["testing-rack", "capability"].join("-")
+const storedToken = () => {
   try {
-    return localStorage.getItem(CAPABILITY_KEY)
+    const token = localStorage.getItem(TOKEN_KEY) || localStorage.getItem(LEGACY_KEY)
+    if (token) localStorage.setItem(TOKEN_KEY, token)
+    localStorage.removeItem(LEGACY_KEY)
+    return token
   } catch {
     return null
   }
 }
-const rememberCapability = (value) => {
+const rememberToken = (value) => {
   try {
     value
-      ? localStorage.setItem(CAPABILITY_KEY, value)
-      : localStorage.removeItem(CAPABILITY_KEY)
+      ? localStorage.setItem(TOKEN_KEY, value)
+      : localStorage.removeItem(TOKEN_KEY)
   } catch {}
 }
-const fragmentCapability = new URLSearchParams(location.hash.slice(1)).get(
-  "reservation",
-)
-const savedCapability = storedCapability()
+const fragmentToken = new URLSearchParams(location.hash.slice(1)).get("token")
+const savedToken = storedToken()
 const ui = {
   state: null,
   reservation: null,
-  capability: savedCapability || fragmentCapability,
+  token: savedToken || fragmentToken,
   busy: false,
   fallback:
-    savedCapability &&
-    fragmentCapability &&
-    savedCapability !== fragmentCapability
-      ? fragmentCapability
+    savedToken && fragmentToken && savedToken !== fragmentToken
+      ? fragmentToken
       : null,
 }
-if (!savedCapability && fragmentCapability)
-  rememberCapability(fragmentCapability)
+if (!savedToken && fragmentToken) rememberToken(fragmentToken)
 function requestKey() {
   if (globalThis.crypto?.getRandomValues) {
     const bytes = new Uint8Array(16)
@@ -62,7 +61,7 @@ const left = (deadline, now = Date.now() / 1000) => {
 }
 async function api(path, options = {}) {
   const headers = { Accept: "application/json", ...(options.headers || {}) }
-  if (ui.capability) headers["X-Testing-Rack-Capability"] = ui.capability
+  if (ui.token) headers.Authorization = `Bearer ${ui.token}`
   if (options.body) headers["Content-Type"] = "application/json"
   const response = await fetch(path, { ...options, headers })
   let data
@@ -137,8 +136,8 @@ async function load() {
     $("offline").hidden = true
     setup()
     render()
-    if (!ui.capability) ui.capability = storedCapability()
-    if (ui.capability) await refresh()
+    if (!ui.token) ui.token = storedToken()
+    if (ui.token) await refresh()
     else {
       $("reservation").hidden = true
       $("reserve-form").hidden = false
@@ -154,12 +153,12 @@ async function load() {
 function show(result) {
   ui.reservation = result
   if (ui.state) render()
-  rememberCapability(result.capability)
+  rememberToken(result.token)
   ui.fallback = null
   history.replaceState(
     null,
     "",
-    `${location.pathname}#reservation=${result.capability}`,
+    `${location.pathname}#token=${result.token}`,
   )
   $("reservation").hidden = false
   $("reserve-form").hidden = true
@@ -178,17 +177,17 @@ function show(result) {
 }
 async function refresh() {
   try {
-    show(await api("/api/reservations/current"))
+    show(await api("/api/reservation"))
   } catch {
     if (ui.fallback) {
-      ui.capability = ui.fallback
+      ui.token = ui.fallback
       ui.fallback = null
-      rememberCapability(ui.capability)
+      rememberToken(ui.token)
       return refresh()
     }
-    ui.capability = null
+    ui.token = null
     ui.reservation = null
-    rememberCapability(null)
+    rememberToken(null)
     $("reservation").hidden = true
     $("reserve-form").hidden = false
     history.replaceState(null, "", location.pathname)
@@ -211,12 +210,12 @@ $("reserve-form").onsubmit = async (event) => {
         name,
         count: Number($("count").value),
         hours: Number($("duration").value),
-        key: requestKey(),
       }),
+      headers: { "Idempotency-Key": requestKey() },
     })
-    ui.capability = result.capability
-    rememberCapability(result.capability)
-    location.hash = `reservation=${result.capability}`
+    ui.token = result.token
+    rememberToken(result.token)
+    location.hash = `token=${result.token}`
     show(result)
     setText("message", "")
     await load()
@@ -264,10 +263,10 @@ $("copy-ssh").onclick = () =>
 $("release").onclick = async () => {
   if (!confirm("Release all devices in this reservation?")) return
   try {
-    await api("/api/reservations/current", { method: "DELETE" })
-    ui.capability = null
+    await api("/api/reservation", { method: "DELETE" })
+    ui.token = null
     ui.reservation = null
-    rememberCapability(null)
+    rememberToken(null)
     history.replaceState(null, "", location.pathname)
     $("reservation").hidden = true
     $("reserve-form").hidden = false
@@ -285,8 +284,8 @@ setInterval(() => {
   if (ui.state) render()
 }, 1000)
 addEventListener("storage", (event) => {
-  if (event.key === CAPABILITY_KEY) {
-    ui.capability = event.newValue
+  if (event.key === TOKEN_KEY) {
+    ui.token = event.newValue
     if (!event.newValue) {
       $("reservation").hidden = true
       $("reserve-form").hidden = false

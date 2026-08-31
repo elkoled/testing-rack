@@ -106,18 +106,18 @@ class ReservationMachine(RuleBasedStateMachine):
             return "error"
         assert expected_error is None
         if key in self.keys:
-            assert result["capability"] == self.keys[key]
-            return result["capability"]
+            assert result["token"] == self.keys[key]
+            return result["token"]
         assert len(result["devices"]) == count
-        self.model[result["capability"]] = {
+        self.model[result["token"]] = {
             "name": name,
             "devices": result["devices"],
             "expires": self.clock.value + minutes * 60,
             "key": key,
             "request": request,
         }
-        self.keys[key] = result["capability"]
-        return result["capability"]
+        self.keys[key] = result["token"]
+        return result["token"]
 
     @rule(capability=leases)
     def release(self, capability):
@@ -125,7 +125,7 @@ class ReservationMachine(RuleBasedStateMachine):
         try:
             result = self.store.release(capability)
         except RackError as exc:
-            assert capability not in self.model and exc.code == "invalid_capability"
+            assert capability not in self.model and exc.code == "invalid_token"
             return
         lease = self.model.pop(capability)
         self.keys.pop(lease["key"], None)

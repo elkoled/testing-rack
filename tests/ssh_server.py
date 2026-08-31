@@ -28,10 +28,12 @@ class RestrictedServer(asyncssh.SSHServer):
 
 def api_request(base: str, path: str, capability: str, body=None):
     data = json.dumps(body).encode() if body is not None else None
-    headers = {
-        "X-Testing-Rack-Capability": capability,
-        "Content-Type": "application/json",
-    }
+    credential = (
+        {"Authorization": f"Bearer {capability}"}
+        if path == "/api/reservation"
+        else {"X-Testing-Rack-Capability": capability}
+    )
+    headers = {**credential, "Content-Type": "application/json"}
     request = urllib.request.Request(
         base + path,
         data=data,
@@ -45,7 +47,7 @@ def api_request(base: str, path: str, capability: str, body=None):
 def resolve(services: list[str], capability: str, device: str):
     for service in services:
         try:
-            reservation = api_request(service, "/api/reservations/current", capability)
+            reservation = api_request(service, "/api/reservation", capability)
             if device not in reservation["devices"]:
                 return (
                     None,

@@ -273,8 +273,8 @@ class StateStore:
         if not CAPABILITY_RE.fullmatch(capability):
             raise RackError(
                 403,
-                "invalid_capability",
-                "Reservation capability is invalid or expired.",
+                "invalid_token",
+                "Reservation token is invalid or expired.",
             )
         digest = self._hash_capability(capability)
         lease = next(
@@ -288,8 +288,8 @@ class StateStore:
         if lease is None:
             raise RackError(
                 403,
-                "invalid_capability",
-                "Reservation capability is invalid or expired.",
+                "invalid_token",
+                "Reservation token is invalid or expired.",
             )
         return lease
 
@@ -565,12 +565,12 @@ class StateStore:
                 available.append("ftdi:reset")
             actions[name] = available
         return {
-            "capability": capability,
+            "token": capability,
             "display_id": lease["display_id"],
             "name": lease["name"],
             "devices": devices,
             "expires_at": lease["expires_at"],
-            "reservation_url": f"/#reservation={capability}",
+            "reservation_url": f"/#token={capability}",
             "gateway_command": commands[0],
             "access_commands": commands,
             "actions": actions,
@@ -688,6 +688,13 @@ class Handler(BaseHTTPRequestHandler):
     def _capability(self) -> str:
         return self.headers.get("X-Testing-Rack-Capability", "")
 
+    def _token(self) -> str:
+        authorization = self.headers.get("Authorization", "")
+        scheme, separator, token = authorization.partition(" ")
+        if separator and scheme.lower() == "bearer":
+            return token.strip()
+        return ""
+
     def _body(self) -> dict[str, Any]:
         if (
             self.headers.get("Content-Type", "").split(";", 1)[0].strip().lower()
@@ -725,26 +732,34 @@ class Handler(BaseHTTPRequestHandler):
                         "reserve": {
                             "method": "POST",
                             "path": "/api/reservations",
+                            "headers": {
+                                "Content-Type": "application/json",
+                                "Idempotency-Key": "a unique value for this attempt",
+                            },
                             "json": {
                                 "name": "your name",
                                 "count": 1,
                                 "hours": 1,
-                                "key": "unique string of at least 16 characters",
                             },
                         },
-                        "result": "Run a command from access_commands.",
+                        "result": "Save token and run a command from access_commands.",
                         "limits": "Read hours and max_devices from GET /api/state.",
+                        "read": {
+                            "method": "GET",
+                            "path": "/api/reservation",
+                            "header": "Authorization: Bearer token from reservation",
+                        },
                         "release": {
                             "method": "DELETE",
-                            "path": "/api/reservations/current",
-                            "header": "X-Testing-Rack-Capability: capability from reservation",
+                            "path": "/api/reservation",
+                            "header": "Authorization: Bearer token from reservation",
                         },
                     },
                 )
             elif path.startswith("/api/devices/"):
                 self._json(200, self.store.device(path.removeprefix("/api/devices/")))
-            elif path == "/api/reservations/current":
-                self._json(200, self.store.current(self._capability()))
+            elif path == "/api/reservation":
+                self._json(200, self.store.current(self._token()))
             elif path == "/healthz":
                 self._json(200, {"status": "ok"})
             elif path in ("/", "/index.html"):
@@ -770,7 +785,7 @@ class Handler(BaseHTTPRequestHandler):
         try:
             path, body = urlparse(self.path).path, self._body()
             if path == "/api/reservations":
-                allowed = {"name", "count", "hours", "key"}
+                allowed = {"name", "count", "hours"}
                 if set(body) != allowed:
                     raise RackError(
                         400, "invalid_fields", "Reservation fields are invalid."
@@ -788,7 +803,7 @@ class Handler(BaseHTTPRequestHandler):
                         body["name"],
                         body["count"],
                         hours * 60,
-                        body["key"],
+                        self.headers.get("Idempotency-Key", ""),
                     ),
                 )
             elif path == "/api/gateway/resolve":
@@ -804,9 +819,9 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_DELETE(self) -> None:
         try:
-            if urlparse(self.path).path != "/api/reservations/current":
+            if urlparse(self.path).path != "/api/reservation":
                 raise RackError(404, "not_found", "Path does not exist.")
-            self._json(200, self.store.release(self._capability()))
+            self._json(200, self.store.release(self._token()))
         except RackError as exc:
             self._error(exc)
 

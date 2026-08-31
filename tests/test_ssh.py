@@ -162,11 +162,13 @@ class VirtualRackIntegrationTest(unittest.TestCase):
                 process.wait()
         self.tmp.cleanup()
 
-    def request(self, path, method="GET", body=None, capability=None):
+    def request(self, path, method="GET", body=None, token=None, key=None):
         data = json.dumps(body).encode() if body is not None else None
         headers = {"Content-Type": "application/json"}
-        if capability:
-            headers["X-Testing-Rack-Capability"] = capability
+        if token:
+            headers["Authorization"] = f"Bearer {token}"
+        if key:
+            headers["Idempotency-Key"] = key
         with urllib.request.urlopen(
             urllib.request.Request(
                 "http://localhost:8875" + path,
@@ -203,10 +205,10 @@ class VirtualRackIntegrationTest(unittest.TestCase):
                 "name": "virtual-alex",
                 "count": 2,
                 "hours": 1,
-                "key": "virtual-integration-key-01",
             },
+            key="virtual-integration-key-01",
         )
-        capability = lease["capability"]
+        capability = lease["token"]
         healthy = self.ssh(f"{capability}-NUT001")
         self.assertEqual(
             healthy.returncode,
@@ -221,7 +223,7 @@ class VirtualRackIntegrationTest(unittest.TestCase):
         self.assertEqual(unavailable.returncode, 4)
         self.assertIn("reservation remains active", unavailable.stderr)
         self.assertEqual(
-            self.request("/api/reservations/current", capability=capability)["devices"],
+            self.request("/api/reservation", token=capability)["devices"],
             ["NUT001", "NUT002"],
         )
 
@@ -233,7 +235,7 @@ class VirtualRackIntegrationTest(unittest.TestCase):
         leading_hyphen = self.ssh("r.-AAAAAAAAAAAAAAAAAAAAA.NUT001")
         self.assertEqual(leading_hyphen.returncode, 3, leading_hyphen.stderr)
 
-        self.request("/api/reservations/current", "DELETE", capability=capability)
+        self.request("/api/reservation", "DELETE", token=capability)
         released = self.ssh(f"{capability}-NUT001")
         self.assertEqual(released.returncode, 3)
         self.assertIn("released, or expired", released.stderr)
