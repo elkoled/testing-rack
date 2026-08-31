@@ -165,10 +165,19 @@ function show(result) {
       : "",
   )
   setText("command", result.access_commands.join("\n"))
-  setText(
-    "copy",
-    result.devices.length === 1 ? "Copy SSH" : "Copy all SSH",
-  )
+  setText("copy", "Copy context")
+}
+function contextText() {
+  const result = ui.reservation
+  const actions = [...new Set(Object.values(result.actions || {}).flat())]
+  const lines = [
+    `${ui.state.display_name} · ${result.devices.length} device${result.devices.length === 1 ? "" : "s"} · ${left(result.expires_at)} remaining`,
+    ...result.access_commands,
+  ]
+  if (actions.length)
+    lines.push(`Actions: append ${actions.join(" | ")}`)
+  lines.push("Use assigned NUT devices through the rack gateway only.")
+  return lines.join("\n")
 }
 async function refresh() {
   try {
@@ -224,7 +233,7 @@ $("reserve-form").onsubmit = async (event) => {
 }
 $("copy").onclick = async () => {
   const original = $("copy").textContent
-  const text = $("command").textContent
+  const text = contextText()
   try {
     if (!navigator.clipboard?.writeText) throw Error("Clipboard API unavailable")
     await navigator.clipboard.writeText(text)
@@ -250,7 +259,7 @@ $("copy").onclick = async () => {
       range.selectNodeContents($("command"))
       selection.removeAllRanges()
       selection.addRange(range)
-      setText("message", "Command selected. Press Ctrl+C or Command+C.")
+      setText("message", "SSH selected. Press Ctrl+C or Command+C.")
     }
   }
 }

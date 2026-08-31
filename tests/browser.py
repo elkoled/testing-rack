@@ -52,6 +52,14 @@ def run_case(browser, url: str, scenario: str, init_script: str, viewport: str) 
             "Append for actions: gpu_power:on · gpu_power:off · ftdi:reset"
         )
         assert "NUT" not in page.locator("#controls").inner_text()
+        context_text = page.evaluate("contextText()")
+        assert context_text.startswith("chestnut-rack · 1 device · ")
+        assert "\nssh rack@chestnut " in context_text
+        assert "\nActions: append gpu_power:on | gpu_power:off | ftdi:reset" in context_text
+        assert context_text.endswith(
+            "Use assigned NUT devices through the rack gateway only."
+        )
+        assert page.locator("#copy").inner_text() == "Copy context"
         availability = page.locator("#availability").inner_text()
         assert "reserved ·" in availability and availability.endswith(" free")
         assert page.evaluate(
