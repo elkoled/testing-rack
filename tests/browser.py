@@ -34,7 +34,7 @@ def run_case(browser, url: str, scenario: str, init_script: str, viewport: str) 
         assert page.locator("#matrix .device").count() > 0
         assert page.locator("#rack-name").inner_text() == "chestnut_rack"
         assert page.locator("#agent-help").inner_text() == (
-            "Agent prompt: Reserve 1 device at http://chestnut.comma.internal/api/agent as NAME."
+            "Agent API: http://chestnut.comma.internal/api/agent"
         )
         name = f"chrome-{scenario[:8]}-{viewport[:1]}-{uuid.uuid4().hex[:6]}"
         page.locator("#name").fill(name)

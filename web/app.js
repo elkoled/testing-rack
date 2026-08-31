@@ -131,7 +131,7 @@ async function load() {
     setText("rack-name", ui.state.display_name)
     setText(
       "agent-help",
-      `Agent prompt: Reserve 1 device at http://${ui.state.api_host}/api/agent as NAME.`,
+      `Agent API: http://${ui.state.api_host}/api/agent`,
     )
     document.title = ui.state.display_name
     $("offline").hidden = true
