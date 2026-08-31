@@ -82,12 +82,6 @@ def main():
                     "IdentitiesOnly=yes",
                     "-o",
                     "ClearAllForwardings=yes",
-                    "-o",
-                    "ControlMaster=auto",
-                    "-o",
-                    "ControlPersist=3600",
-                    "-o",
-                    "ControlPath=/var/lib/testing-rack-gateway/.ssh/device-%C",
                     f"comma@comma-{target['serial']}",
                 ]
             ).returncode

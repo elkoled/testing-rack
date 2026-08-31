@@ -35,7 +35,6 @@ class GatewayTest(unittest.TestCase):
         self.assertEqual(stopped.exception.code, 0)
         self.assertEqual(request.call_count, 1)
         self.assertEqual(run.call_args.args[0][-1], "comma@comma-6f9f27a9")
-        self.assertIn("ControlMaster=auto", run.call_args.args[0])
 
 
 if __name__ == "__main__":
