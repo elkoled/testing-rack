@@ -12,13 +12,9 @@ import urllib.error
 import urllib.request
 import re
 
-DIRECT_RE = re.compile(
+SELECTOR_RE = re.compile(
     r"([1-9A-HJ-NP-Za-km-z]{12})-(NUT[0-9]+)(?: (.+))?$"
 )
-PREVIOUS_RE = re.compile(
-    r"(NUT[0-9]+)-([0123456789ABCDEFGHJKMNPQRSTVWXYZ]{4})-([0123456789ABCDEFGHJKMNPQRSTVWXYZ]{4})-([0123456789ABCDEFGHJKMNPQRSTVWXYZ]{4})-([0123456789ABCDEFGHJKMNPQRSTVWXYZ]{4})$"
-)
-LEGACY_RE = re.compile(r"r\.([A-Za-z0-9_-]{22})\.(NUT[0-9]+)$")
 
 
 def request(base: str, path: str, capability: str, body=None):
@@ -63,10 +59,6 @@ def close_connection(socket_path: Path, destination: str) -> None:
     )
 
 
-def terminal_option() -> str:
-    return "-t" if sys.stdin.isatty() else "-T"
-
-
 def forward(
     command: list[str],
     revoked: threading.Event,
@@ -92,27 +84,12 @@ def main():
     parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument("--service", default="http://localhost:80")
     parser.add_argument("--identity", default="/etc/testing-rack/device_key")
-    parser.add_argument("--authorize-only", action="store_true")
     args = parser.parse_args()
     original = os.environ.get("SSH_ORIGINAL_COMMAND", "")
-    match, previous, legacy = (
-        DIRECT_RE.fullmatch(original),
-        PREVIOUS_RE.fullmatch(original),
-        LEGACY_RE.fullmatch(original),
-    )
-    if match:
-        capability, device, remote_command = match.groups()
-    elif previous:
-        device, *groups = previous.groups()
-        capability = "".join(groups)
-        remote_command = None
-    elif legacy:
-        capability, device = legacy.groups()
-        remote_command = None
-    else:
+    match = SELECTOR_RE.fullmatch(original)
+    if not match:
         raise SystemExit("Usage: ssh rack@chestnut 7Km3P9xQvT2w-NUT001")
-    if remote_command and re.fullmatch(r"-i\s+\S+", remote_command):
-        remote_command = None
+    capability, device, remote_command = match.groups()
     target = request(
         args.service, "/api/gateway/resolve", capability, {"device": device}
     )
@@ -135,73 +112,61 @@ def main():
                 ]
             ).returncode
         )
-    if args.authorize_only:
-        print(
-            json.dumps(
-                {
-                    "status": "authorized",
-                    "device": device,
-                    "mode": "hardware-disabled",
-                }
-            )
-        )
-        return
-    else:
-        socket_path = Path("/var/lib/testing-rack-gateway/connections") / device
-        connection = []
-        control = None
-        destination = f"comma@comma-{target['serial']}"
-        if socket_path.exists():
-            try:
-                checked = subprocess.run(
-                    [
-                        "ssh",
-                        "-S",
-                        str(socket_path),
-                        "-O",
-                        "check",
-                        destination,
-                    ],
-                    stdin=subprocess.DEVNULL,
-                    stdout=subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL,
-                    timeout=1,
-                )
-                if checked.returncode == 0:
-                    connection = ["-S", str(socket_path)]
-                    control = (socket_path, destination)
-            except (OSError, subprocess.TimeoutExpired):
-                pass
-        stop = threading.Event()
-        revoked = threading.Event()
-        heartbeat = threading.Thread(
-            target=keep_active,
-            args=(stop, revoked, args.service, capability, device),
-            daemon=True,
-        )
-        heartbeat.start()
+    socket_path = Path("/var/lib/testing-rack-gateway/connections") / device
+    connection = []
+    control = None
+    destination = f"comma@comma-{target['serial']}"
+    if socket_path.exists():
         try:
-            result = forward(
+            checked = subprocess.run(
                 [
                     "ssh",
-                    *connection,
-                    terminal_option(),
-                    "-i",
-                    args.identity,
-                    "-o",
-                    "IdentitiesOnly=yes",
-                    "-o",
-                    "ClearAllForwardings=yes",
+                    "-S",
+                    str(socket_path),
+                    "-O",
+                    "check",
                     destination,
-                    *([remote_command] if remote_command else []),
                 ],
-                revoked,
-                control,
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                timeout=1,
             )
-        finally:
-            stop.set()
-            heartbeat.join(timeout=1)
-        raise SystemExit(result)
+            if checked.returncode == 0:
+                connection = ["-S", str(socket_path)]
+                control = (socket_path, destination)
+        except (OSError, subprocess.TimeoutExpired):
+            pass
+    stop = threading.Event()
+    revoked = threading.Event()
+    heartbeat = threading.Thread(
+        target=keep_active,
+        args=(stop, revoked, args.service, capability, device),
+        daemon=True,
+    )
+    heartbeat.start()
+    try:
+        result = forward(
+            [
+                "ssh",
+                *connection,
+                "-tt",
+                "-i",
+                args.identity,
+                "-o",
+                "IdentitiesOnly=yes",
+                "-o",
+                "ClearAllForwardings=yes",
+                destination,
+                *([remote_command] if remote_command else []),
+            ],
+            revoked,
+            control,
+        )
+    finally:
+        stop.set()
+        heartbeat.join(timeout=1)
+    raise SystemExit(result)
 
 
 if __name__ == "__main__":

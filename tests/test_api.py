@@ -232,15 +232,6 @@ class HttpApiTest(unittest.TestCase):
                 )
 
     def test_paths_and_token_boundaries(self):
-        status, _, body = self.request("GET", "/api/devices/NUT001")
-        self.assertEqual(status, 200)
-        public_device = json.loads(body)
-        self.assertNotIn("serial", public_device)
-        self.assertNotIn("ftdi_serial", public_device)
-        self.assertNotIn("gpu_power_switch", public_device)
-        self.assert_json_error(
-            self.request("GET", "/api/devices/NUT999"), 404, "not_found"
-        )
         self.assert_json_error(
             self.request("GET", "/api/reservation"), 403, "invalid_token"
         )

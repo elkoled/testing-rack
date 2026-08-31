@@ -48,10 +48,7 @@ def resolve(services: list[str], capability: str, device: str):
         try:
             reservation = api_request(service, "/api/reservation", capability)
             if device not in reservation["devices"]:
-                return (
-                    None,
-                    f"ACCESS DENIED: {device} is not part of reservation {reservation['display_id']}.",
-                )
+                return None, f"ACCESS DENIED: {device} is not reserved by this token."
             target = api_request(
                 service, "/api/gateway/resolve", capability, {"device": device}
             )
@@ -86,30 +83,12 @@ async def handle(
     virtual_device_port: int | None,
 ) -> None:
     selector, separator, remote_command = (process.command or "").partition(" ")
-    parts = [selector] if selector else []
-    modern = (
-        re.fullmatch(r"([1-9A-HJ-NP-Za-km-z]{12})-(NUT[0-9]+)", parts[0])
-        if len(parts) == 1
-        else None
-    )
-    previous = (
-        re.fullmatch(
-            r"(NUT[0-9]+)-([0123456789ABCDEFGHJKMNPQRSTVWXYZ]{4}(?:-[0123456789ABCDEFGHJKMNPQRSTVWXYZ]{4}){3})",
-            parts[0],
-        )
-        if len(parts) == 1
-        else None
-    )
-    if modern:
-        capability, device = modern.groups()
-    elif previous:
-        device, capability = previous.group(1), previous.group(2).replace("-", "")
-    elif len(parts) == 1 and parts[0].startswith("r."):
-        capability, device = parts[0][2:].rsplit(".", 1)
-    else:
+    match = re.fullmatch(r"([1-9A-HJ-NP-Za-km-z]{12})-(NUT[0-9]+)", selector)
+    if not match:
         process.stderr.write("Usage: 7Km3P9xQvT2w-NUT001\n")
         process.exit(2)
         return
+    capability, device = match.groups()
     if not CAPABILITY_RE.fullmatch(capability) or not DEVICE_RE.fullmatch(device):
         process.stderr.write("Usage: 7Km3P9xQvT2w-NUT001\n")
         process.exit(2)
@@ -150,7 +129,6 @@ async def handle(
         json.dumps(
             {
                 "status": "authorized",
-                "reservation": reservation["display_id"],
                 "device": target["name"],
                 "health": target["health"],
                 "expires_at": reservation["expires_at"],

@@ -1,7 +1,12 @@
 #!/usr/bin/env python3
 """One-command, fail-fast lifecycle gate for testing_rack."""
 
-import json, os, socket, subprocess, sys, tempfile, time
+import json
+import os
+import socket
+import subprocess
+import tempfile
+import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent

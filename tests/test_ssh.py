@@ -274,11 +274,11 @@ class VirtualRackIntegrationTest(unittest.TestCase):
 
         outside_scope = self.ssh(f"{capability}-NUT003")
         self.assertEqual(outside_scope.returncode, 3)
-        self.assertIn("not part of reservation", outside_scope.stderr)
+        self.assertIn("not reserved by this token", outside_scope.stderr)
         random_token = self.ssh("7Km3P9xQvT2w-NUT001")
         self.assertEqual(random_token.returncode, 3)
         leading_hyphen = self.ssh("r.-AAAAAAAAAAAAAAAAAAAAA.NUT001")
-        self.assertEqual(leading_hyphen.returncode, 3, leading_hyphen.stderr)
+        self.assertEqual(leading_hyphen.returncode, 2, leading_hyphen.stderr)
 
         self.request("/api/reservation", "DELETE", token=capability)
         released = self.ssh(f"{capability}-NUT001")

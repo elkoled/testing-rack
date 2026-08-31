@@ -122,8 +122,6 @@ class Campaign:
             "/api/reservation",
             "/api/state",
             "/api/agent",
-            "/api/devices/NUT001",
-            "/api/devices/../state",
             "/../config.json",
             "/%2e%2e/config.json",
             "/" + "A" * rng.randint(1, 2048),

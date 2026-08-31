@@ -1,6 +1,5 @@
 {
   "display_name": "chestnut_rack",
-  "api_host": "chestnut.comma.internal",
   "gateway_host": "chestnut",
   "gateway_port": 22,
   "idle_timeout_minutes": 30,

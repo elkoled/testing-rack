@@ -40,7 +40,6 @@ class RackError(Exception):
 @dataclass(frozen=True)
 class Config:
     display_name: str
-    api_host: str
     gateway_host: str
     gateway_port: int
     idle_timeout_minutes: int
@@ -61,7 +60,7 @@ class Config:
             "devices",
         }
         if not required.issubset(raw) or not set(raw).issubset(
-            required | {"display_name", "api_host"}
+            required | {"display_name"}
         ):
             raise ValueError("config fields are invalid")
         display_name = raw.get("display_name", "testing-rack")
@@ -69,9 +68,6 @@ class Config:
             r"[a-z0-9][a-z0-9_-]{0,31}", display_name
         ):
             raise ValueError("display_name is invalid")
-        api_host = raw.get("api_host", raw["gateway_host"])
-        if not isinstance(api_host, str) or not api_host.strip():
-            raise ValueError("api_host is invalid")
         if not isinstance(raw["gateway_host"], str) or not raw["gateway_host"].strip():
             raise ValueError("gateway_host must be a non-empty string")
         if (
@@ -144,7 +140,6 @@ class Config:
             raise ValueError("max_devices_per_reservation exceeds inventory")
         return cls(
             display_name,
-            api_host,
             raw["gateway_host"],
             raw["gateway_port"],
             idle_timeout_minutes,
@@ -184,10 +179,6 @@ class StateStore:
         state = {
             "version": 1,
             "leases": [],
-            "idempotency": {},
-            "overrides": {},
-            "metadata": {},
-            "last_released": {},
         }
         _atomic_create(
             state_path,
@@ -200,6 +191,7 @@ class StateStore:
         try:
             state = json.loads(self.path.read_text())
             self._validate_state(state)
+            state.pop("idempotency", None)
             return state
         except FileNotFoundError as exc:
             raise ValueError(
@@ -216,9 +208,7 @@ class StateStore:
     def _validate_state(self, state: Any) -> None:
         if not isinstance(state, dict) or state.get("version") != 1:
             raise ValueError("unsupported state")
-        if not isinstance(state.get("leases"), list) or not isinstance(
-            state.get("idempotency"), dict
-        ):
+        if not isinstance(state.get("leases"), list):
             raise ValueError("malformed state collections")
         configured = {d["name"] for d in self.config.devices}
         occupied = set()
@@ -241,9 +231,6 @@ class StateStore:
             if occupied.intersection(lease["devices"]):
                 raise ValueError("device appears in multiple leases")
             occupied.update(lease["devices"])
-        for key in ("overrides", "metadata", "last_released"):
-            if not isinstance(state.get(key), dict):
-                raise ValueError(f"malformed {key}")
 
     def _capability(self, key: str) -> str:
         value = int.from_bytes(
@@ -302,9 +289,6 @@ class StateStore:
     def _effective_health(
         self, name: str, connection_health: dict[str, str] | None = None
     ) -> str:
-        override = self.state["overrides"].get(name)
-        if override in {"degraded", "offline", "unknown"}:
-            return override
         connection_health = (
             self._connection_health()
             if connection_health is None
@@ -312,17 +296,13 @@ class StateStore:
         )
         if name in connection_health:
             return connection_health[name]
-        return self.state["metadata"].get(name, {}).get("health", "ready")
+        return "ready"
 
     def _expire(self, state: dict[str, Any], now: float) -> bool:
         expired = [x for x in state["leases"] if x["expires_at"] <= now]
         if not expired:
             return False
         state["leases"] = [x for x in state["leases"] if x["expires_at"] > now]
-        live_keys = {x["idempotency_key"] for x in state["leases"]}
-        state["idempotency"] = {
-            k: v for k, v in state["idempotency"].items() if k in live_keys
-        }
         return True
 
     def _expire_and_persist_if_needed(self) -> None:
@@ -385,7 +365,6 @@ class StateStore:
     def public_state(self) -> dict[str, Any]:
         with self.lock:
             self._expire_and_persist_if_needed()
-            now = self.now()
             owners = {
                 name: lease
                 for lease in self.state["leases"]
@@ -404,39 +383,22 @@ class StateStore:
                 devices.append(
                     {
                         "name": item["name"],
-                        "device_type": item["device_type"],
                         "health": health,
                         "state": "reserved" if lease else health,
                         "owner": lease["name"] if lease else None,
-                        "expires_at": lease["expires_at"] if lease else None,
                     }
                 )
             return {
-                "now": now,
                 "devices": devices,
                 "max_devices": self.config.max_devices_per_reservation,
                 "idle_timeout_minutes": self.config.idle_timeout_minutes,
-                "gateway_host": self.config.gateway_host,
-                "api_host": self.config.api_host,
                 "display_name": self.config.display_name,
             }
-
-    def device(self, name: str) -> dict[str, Any]:
-        state = self.public_state()
-        device = next((x for x in state["devices"] if x["name"] == name), None)
-        if device is None:
-            raise RackError(404, "not_found", "Device does not exist.")
-        meta = self.state["metadata"].get(name, {})
-        return {
-            **device,
-            "metadata": meta,
-        }
 
     def reserve(
         self,
         name: Any,
         count: Any,
-        duration: Any,
         key: Any,
         requested_devices: Any = None,
     ) -> dict[str, Any]:
@@ -450,14 +412,6 @@ class StateStore:
                 400,
                 "invalid_count",
                 f"Device count must be 1–{self.config.max_devices_per_reservation}.",
-            )
-        if (
-            isinstance(duration, bool)
-            or not isinstance(duration, int)
-            or duration < 1
-        ):
-            raise RackError(
-                400, "invalid_duration", "Idle timeout is invalid."
             )
         if not isinstance(key, str) or not IDEMPOTENCY_RE.fullmatch(key):
             raise RackError(400, "invalid_key", "Key is malformed.")
@@ -480,21 +434,11 @@ class StateStore:
         with self.lock:
             self._expire_and_persist_if_needed()
             capability = self._capability(key)
-            if key in self.state["idempotency"]:
-                lease = next(
-                    (
-                        item
-                        for item in self.state["leases"]
-                        if item["idempotency_key"] == key
-                    ),
-                    None,
-                )
-                if lease is None:
-                    raise RackError(
-                        500,
-                        "state_inconsistent",
-                        "Reservation state is inconsistent; refusing allocation.",
-                    )
+            lease = next(
+                (item for item in self.state["leases"] if item["idempotency_key"] == key),
+                None,
+            )
+            if lease is not None:
                 if (
                     lease["name"] != name
                     or len(lease["devices"]) != count
@@ -561,14 +505,13 @@ class StateStore:
                 "display_id": secrets.token_hex(2).upper(),
                 "name": name,
                 "devices": ready[:count],
-                "expires_at": now + duration * 60,
+                "expires_at": now + self.config.idle_timeout_minutes * 60,
                 "capability_hash": self._hash_capability(capability),
                 "created_at": now,
                 "idempotency_key": key,
             }
             candidate = copy.deepcopy(self.state)
             candidate["leases"].append(lease)
-            candidate["idempotency"][key] = lease["display_id"]
             self._persist(candidate)
             return self._reservation_response(lease, capability)
 
@@ -600,8 +543,6 @@ class StateStore:
             "name": lease["name"],
             "devices": devices,
             "expires_at": lease["expires_at"],
-            "reservation_url": f"/#token={capability}",
-            "gateway_command": commands[0],
             "access_commands": commands,
             "actions": actions,
         }
@@ -621,7 +562,6 @@ class StateStore:
                 for x in candidate["leases"]
                 if x["capability_hash"] != lease["capability_hash"]
             ]
-            candidate["idempotency"].pop(lease["idempotency_key"], None)
             self._persist(candidate)
             return {
                 "released": sorted(
@@ -803,8 +743,6 @@ class Handler(BaseHTTPRequestHandler):
                         },
                     },
                 )
-            elif path.startswith("/api/devices/"):
-                self._json(200, self.store.device(path.removeprefix("/api/devices/")))
             elif path == "/api/reservation":
                 self._json(200, self.store.current(self._token()))
             elif path == "/healthz":
@@ -848,7 +786,6 @@ class Handler(BaseHTTPRequestHandler):
                     self.store.reserve(
                         body["name"],
                         count,
-                        self.store.config.idle_timeout_minutes,
                         self.headers.get("Idempotency-Key", ""),
                         requested_devices,
                     ),

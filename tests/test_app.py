@@ -55,20 +55,20 @@ class StoreTest(unittest.TestCase):
         self.tmp.cleanup()
 
     def reserve(self, count=1, key="abcdefghijklmnop"):
-        return self.store.reserve("alex", count, 60, key)
+        return self.store.reserve("alex", count, key)
 
     def test_atomic_multi_device_reservation(self):
         result = self.reserve(3)
         self.assertEqual(result["devices"], ["NUT001", "NUT002", "NUT003"])
         with self.assertRaises(RackError) as caught:
-            self.store.reserve("mira", 1, 60, "different-key-123")
+            self.store.reserve("mira", 1, "different-key-123")
         self.assertEqual(caught.exception.status, 409)
         self.assertEqual(len(self.store.state["leases"]), 1)
 
     def test_released_low_devices_are_reused_first(self):
         first = self.reserve(1)
         self.store.release(first["token"])
-        result = self.store.reserve("alex", 3, 60, "second-request-key")
+        result = self.store.reserve("alex", 3, "second-request-key")
         self.assertEqual(result["devices"], ["NUT001", "NUT002", "NUT003"])
         self.assertTrue(result["access_commands"][0].endswith("-NUT001"))
         self.assertTrue(result["access_commands"][1].endswith("-NUT002"))
@@ -76,7 +76,7 @@ class StoreTest(unittest.TestCase):
 
     def test_display_id_collision_does_not_release_another_lease(self):
         first = self.reserve(1)
-        second = self.store.reserve("mira", 1, 60, "different-key-123")
+        second = self.store.reserve("mira", 1, "different-key-123")
         self.store.state["leases"][1]["display_id"] = self.store.state["leases"][0][
             "display_id"
         ]
@@ -96,12 +96,12 @@ class StoreTest(unittest.TestCase):
 
     def test_exact_device_selection_is_atomic(self):
         result = self.store.reserve(
-            "alex", 2, 60, "exact-devices-key", ["NUT003", "NUT001"]
+            "alex", 2, "exact-devices-key", ["NUT003", "NUT001"]
         )
         self.assertEqual(result["devices"], ["NUT001", "NUT003"])
         with self.assertRaises(RackError) as caught:
             self.store.reserve(
-                "mira", 1, 60, "unavailable-device-key", ["NUT003"]
+                "mira", 1, "unavailable-device-key", ["NUT003"]
             )
         self.assertEqual(caught.exception.code, "devices_unavailable")
 
@@ -125,7 +125,7 @@ class StoreTest(unittest.TestCase):
 
     def test_idempotency_key_rejects_different_request(self):
         self.reserve(1)
-        for args in (("mira", 1, 60), ("alex", 2, 60)):
+        for args in (("mira", 1), ("alex", 2)):
             with self.subTest(args=args), self.assertRaises(RackError) as caught:
                 self.store.reserve(*args, "abcdefghijklmnop")
             self.assertEqual(caught.exception.code, "idempotency_conflict")
@@ -134,7 +134,7 @@ class StoreTest(unittest.TestCase):
     def test_one_live_reservation_per_name(self):
         first = self.reserve(1)
         with self.assertRaises(RackError) as caught:
-            self.store.reserve(" ALEX ", 1, 60, "different-key-123")
+            self.store.reserve(" ALEX ", 1, "different-key-123")
         self.assertEqual(caught.exception.status, 409)
         self.assertEqual(caught.exception.code, "reservation_exists")
         self.assertEqual(caught.exception.extra["display_id"], first["display_id"])
@@ -147,7 +147,7 @@ class StoreTest(unittest.TestCase):
         def contender(index):
             barrier.wait()
             try:
-                self.store.reserve("alex", 1, 60, f"same-user-key-{index:03d}")
+                self.store.reserve("alex", 1, f"same-user-key-{index:03d}")
                 outcomes.append("won")
             except RackError as exc:
                 outcomes.append(exc.code)
@@ -212,12 +212,6 @@ class StoreTest(unittest.TestCase):
             restarted.current(result["token"])["devices"], result["devices"]
         )
 
-    def test_restart_caps_legacy_deadline_to_idle_timeout(self):
-        result = self.store.reserve("alex", 1, 1440, "legacy-deadline-key")
-        restarted = StateStore(self.config, self.state, self.secret, self.clock)
-        current = restarted.current(result["token"])
-        self.assertEqual(current["expires_at"], self.clock.value + 3600)
-
     def test_failed_atomic_commit_never_changes_memory_or_current_disk_state(self):
         before_memory = json.loads(json.dumps(self.store.state))
         before_disk = self.state.read_bytes()
@@ -262,7 +256,7 @@ class StoreTest(unittest.TestCase):
 
     def test_corrupt_current_fails_closed_instead_of_loading_stale_backup(self):
         self.reserve(1)
-        self.store.reserve("mira", 1, 60, "another-key-12345")
+        self.store.reserve("mira", 1, "another-key-12345")
         self.state.write_text("broken")
         with self.assertRaisesRegex(ValueError, "refusing stale recovery"):
             StateStore(self.config, self.state, self.secret, self.clock)
@@ -281,7 +275,7 @@ class StoreTest(unittest.TestCase):
         def contender(index):
             barrier.wait()
             try:
-                self.store.reserve(f"user{index}", 1, 60, f"concurrent-key-{index:03d}")
+                self.store.reserve(f"user{index}", 1, f"concurrent-key-{index:03d}")
                 outcomes.append("won")
             except RackError as exc:
                 outcomes.append(exc.status)
@@ -296,11 +290,10 @@ class StoreTest(unittest.TestCase):
 
     def test_validation_boundaries(self):
         cases = [
-            ("a", 1, 60, "abcdefghijklmnop"),
-            ("alex", True, 60, "abcdefghijklmnop"),
-            ("alex", 4, 60, "abcdefghijklmnop"),
-            ("alex", 1, 0, "abcdefghijklmnop"),
-            ("alex", 1, 60, "short"),
+            ("a", 1, "abcdefghijklmnop"),
+            ("alex", True, "abcdefghijklmnop"),
+            ("alex", 4, "abcdefghijklmnop"),
+            ("alex", 1, "short"),
         ]
         for args in cases:
             with self.subTest(args=args), self.assertRaises(RackError):
@@ -407,7 +400,7 @@ class ScaleTest(unittest.TestCase):
                 try:
                     results.append(
                         store.reserve(
-                            f"user-{index:02d}", 5, 60, f"scale-user-key-{index:03d}"
+                            f"user-{index:02d}", 5, f"scale-user-key-{index:03d}"
                         )
                     )
                 except Exception as exc:

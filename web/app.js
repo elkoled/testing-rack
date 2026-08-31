@@ -1,19 +1,9 @@
 "use strict"
-const preview = document.querySelector("#terminal-preview")
-if (preview) {
-  const box = preview.closest(".terminal,details")
-  const target = box || preview
-  target.remove()
-}
 const $ = (id) => document.getElementById(id),
-  TOKEN_KEY = "testing-rack-token",
-  LEGACY_KEY = ["testing-rack", "capability"].join("-")
+  TOKEN_KEY = "testing-rack-token"
 const storedToken = () => {
   try {
-    const token = localStorage.getItem(TOKEN_KEY) || localStorage.getItem(LEGACY_KEY)
-    if (token) localStorage.setItem(TOKEN_KEY, token)
-    localStorage.removeItem(LEGACY_KEY)
-    return token
+    return localStorage.getItem(TOKEN_KEY)
   } catch {
     return null
   }
@@ -31,14 +21,10 @@ const ui = {
   state: null,
   reservation: null,
   selected: new Set(),
-  token: savedToken || fragmentToken,
+  token: fragmentToken || savedToken,
   busy: false,
-  fallback:
-    savedToken && fragmentToken && savedToken !== fragmentToken
-      ? fragmentToken
-      : null,
 }
-if (!savedToken && fragmentToken) rememberToken(fragmentToken)
+if (fragmentToken) rememberToken(fragmentToken)
 function requestKey() {
   if (globalThis.crypto?.getRandomValues) {
     const bytes = new Uint8Array(16)
@@ -66,14 +52,8 @@ async function api(path, options = {}) {
   if (!response.ok) throw Error(data.message || "Request failed.")
   return data
 }
-function setup() {
-  if ($("count").onchange) return
-  $("count").onchange = () => selectCount(Number($("count").value))
-}
 function buttonLabel() {
-  const n = ui.selected.size
-  setText("reserve", "Reserve")
-  $("reserve").disabled = n === 0
+  $("reserve").disabled = ui.selected.size === 0
 }
 function readyNames() {
   return ui.state.devices
@@ -157,7 +137,6 @@ async function load() {
     )
     document.title = ui.state.display_name
     $("offline").hidden = true
-    setup()
     render()
     if (!ui.token) ui.token = storedToken()
     if (ui.token) await refresh()
@@ -177,7 +156,6 @@ function show(result) {
   ui.reservation = result
   if (ui.state) render()
   rememberToken(result.token)
-  ui.fallback = null
   history.replaceState(
     null,
     "",
@@ -202,12 +180,6 @@ async function refresh() {
   try {
     show(await api("/api/reservation"))
   } catch {
-    if (ui.fallback) {
-      ui.token = ui.fallback
-      ui.fallback = null
-      rememberToken(ui.token)
-      return refresh()
-    }
     ui.token = null
     ui.reservation = null
     rememberToken(null)
@@ -301,11 +273,9 @@ $("release").onclick = async () => {
 try {
   $("name").value = localStorage.getItem("testing-rack-name") || ""
 } catch {}
+$("count").onchange = () => selectCount(Number($("count").value))
 load()
 setInterval(load, 5000)
-setInterval(() => {
-  if (ui.state) render()
-}, 1000)
 addEventListener("storage", (event) => {
   if (event.key === TOKEN_KEY) {
     ui.token = event.newValue

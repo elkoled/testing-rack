@@ -9,9 +9,6 @@ from hypothesis.strategies import integers
 from app import Config, RackError, StateStore
 
 
-TEST_TIMEOUTS = (1, 10, 30, 60, 1440)
-
-
 class Clock:
     def __init__(self):
         self.value = 1_700_000_000.0
@@ -73,15 +70,12 @@ class ReservationMachine(RuleBasedStateMachine):
         target=leases,
         user=integers(0, 5),
         count=integers(1, 8),
-        duration=integers(0, 4),
         key_index=integers(0, 9),
     )
-    def reserve(self, user, count, duration, key_index):
+    def reserve(self, user, count, key_index):
         self.expire_model()
         name = f"user-{user}"
-        minutes = TEST_TIMEOUTS[duration]
         key = f"model-request-key-{key_index:03d}"
-        request = (name, count, minutes)
         identity = (name, count)
         expected_error = None
         if key in self.keys:
@@ -97,12 +91,12 @@ class ReservationMachine(RuleBasedStateMachine):
             if 8 - len(occupied) < count:
                 expected_error = "insufficient_devices"
         try:
-            result = self.store.reserve(name, count, minutes, key)
+            result = self.store.reserve(name, count, key)
         except RackError as exc:
             assert exc.code == expected_error, (
                 exc.code,
                 expected_error,
-                request,
+                identity,
                 key,
                 self.model,
             )
@@ -115,7 +109,7 @@ class ReservationMachine(RuleBasedStateMachine):
         self.model[result["token"]] = {
             "name": name,
             "devices": result["devices"],
-            "expires": self.clock.value + minutes * 60,
+            "expires": self.clock.value + self.config.idle_timeout_minutes * 60,
             "key": key,
             "request": identity,
         }
@@ -168,7 +162,6 @@ class ReservationMachine(RuleBasedStateMachine):
         ]
         assert len(assigned) == len(set(assigned))
         assert len(self.store.state["leases"]) == len(self.model)
-        assert set(self.store.state["idempotency"]) == set(self.keys)
 
 
 TestReservationMachine = ReservationMachine.TestCase

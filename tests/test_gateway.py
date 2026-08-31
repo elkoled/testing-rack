@@ -10,14 +10,6 @@ import gateway
 
 
 class GatewayTest(unittest.TestCase):
-    def test_terminal_option_matches_caller(self):
-        stdin = mock.Mock()
-        with mock.patch.object(gateway.sys, "stdin", stdin):
-            stdin.isatty.return_value = False
-            self.assertEqual(gateway.terminal_option(), "-T")
-            stdin.isatty.return_value = True
-            self.assertEqual(gateway.terminal_option(), "-t")
-
     def test_active_session_heartbeat_refreshes_reservation(self):
         stop = mock.Mock()
         revoked = threading.Event()
@@ -71,7 +63,6 @@ class GatewayTest(unittest.TestCase):
             "expires_at": time.time() + 3600,
             "display_name": "chestnut_rack",
         }
-        completed = mock.Mock(returncode=0)
         with (
             mock.patch.object(sys, "argv", ["gateway.py"]),
             mock.patch.dict(
@@ -88,8 +79,7 @@ class GatewayTest(unittest.TestCase):
         self.assertEqual(stopped.exception.code, 0)
         self.assertEqual(request.call_count, 1)
         self.assertEqual(run.call_args.args[0][-1], "comma@comma-6f9f27a9")
-        self.assertNotIn("-tt", run.call_args.args[0])
-        self.assertIn("-T", run.call_args.args[0])
+        self.assertIn("-tt", run.call_args.args[0])
         self.assertEqual(stderr.getvalue(), "chestnut_rack · NUT001\n")
 
     def test_hardware_action_is_scoped_and_delegated(self):
@@ -131,7 +121,6 @@ class GatewayTest(unittest.TestCase):
             "expires_at": time.time() + 3600,
             "display_name": "chestnut_rack",
         }
-        completed = mock.Mock(returncode=7)
         command = "printf '%s\\n' agent-ok && uname -a"
         with (
             mock.patch.object(sys, "argv", ["gateway.py"]),
@@ -148,36 +137,8 @@ class GatewayTest(unittest.TestCase):
             gateway.main()
         self.assertEqual(stopped.exception.code, 7)
         self.assertEqual(run.call_args.args[0][-2:], ["comma@comma-6f9f27a9", command])
+        self.assertIn("-tt", run.call_args.args[0])
         self.assertNotIn("shell", run.call_args.kwargs)
-
-    def test_misplaced_identity_option_is_ignored(self):
-        target = {
-            "name": "NUT001",
-            "serial": "6f9f27a9",
-            "health": "ready",
-            "expires_at": time.time() + 3600,
-            "display_name": "chestnut_rack",
-        }
-        completed = mock.Mock(returncode=0)
-        with (
-            mock.patch.object(sys, "argv", ["gateway.py"]),
-            mock.patch.dict(
-                os.environ,
-                {
-                    "SSH_ORIGINAL_COMMAND": (
-                        "7Km3P9xQvT2w-NUT001 -i /home/alex/.ssh/xx_key"
-                    )
-                },
-                clear=False,
-            ),
-            mock.patch.object(gateway, "request", return_value=target),
-            mock.patch.object(gateway, "forward", return_value=0) as run,
-            mock.patch.object(sys, "stderr", io.StringIO()),
-            self.assertRaises(SystemExit) as stopped,
-        ):
-            gateway.main()
-        self.assertEqual(stopped.exception.code, 0)
-        self.assertEqual(run.call_args.args[0][-1], "comma@comma-6f9f27a9")
 
 if __name__ == "__main__":
     unittest.main()

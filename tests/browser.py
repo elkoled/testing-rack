@@ -87,17 +87,6 @@ def run_case(browser, url: str, scenario: str, init_script: str, viewport: str) 
         second.locator("#reservation").wait_for(state="visible")
         assert second.locator("#command").inner_text() == command
         second.close()
-        # Existing reservations survive the one-time credential naming migration.
-        page.evaluate(
-            """() => {
-              localStorage.setItem('testing-rack-capability', localStorage.getItem('testing-rack-token'))
-              localStorage.removeItem('testing-rack-token')
-            }"""
-        )
-        page.goto(url, wait_until="networkidle")
-        page.locator("#reservation").wait_for(state="visible")
-        assert page.locator("#command").inner_text() == command
-        assert page.evaluate("localStorage.getItem('testing-rack-capability')") is None
         page.once("dialog", lambda dialog: dialog.accept())
         page.locator("#release").click()
         page.locator("#reservation").wait_for(state="hidden")
