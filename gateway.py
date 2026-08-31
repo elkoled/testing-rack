@@ -11,7 +11,9 @@ import urllib.error
 import urllib.request
 import re
 
-DIRECT_RE = re.compile(r"([1-9A-HJ-NP-Za-km-z]{12})-(NUT[0-9]+)$")
+DIRECT_RE = re.compile(
+    r"([1-9A-HJ-NP-Za-km-z]{12})-(NUT[0-9]+)(?: (gpu_power:(?:on|off)|ftdi:reset))?$"
+)
 PREVIOUS_RE = re.compile(
     r"(NUT[0-9]+)-([0123456789ABCDEFGHJKMNPQRSTVWXYZ]{4})-([0123456789ABCDEFGHJKMNPQRSTVWXYZ]{4})-([0123456789ABCDEFGHJKMNPQRSTVWXYZ]{4})-([0123456789ABCDEFGHJKMNPQRSTVWXYZ]{4})$"
 )
@@ -47,12 +49,14 @@ def main():
         LEGACY_RE.fullmatch(original),
     )
     if match:
-        capability, device = match.groups()
+        capability, device, action = match.groups()
     elif previous:
         device, *groups = previous.groups()
         capability = "".join(groups)
+        action = None
     elif legacy:
         capability, device = legacy.groups()
+        action = None
     else:
         raise SystemExit("Usage: ssh rack@chestnut.comma.internal 7Km3P9xQvT2w-NUT001")
     target = request(
@@ -60,6 +64,19 @@ def main():
     )
     if target["health"] != "ready":
         print(f"Warning: {device} is {target['health']}.", file=sys.stderr)
+    if action:
+        raise SystemExit(
+            subprocess.run(
+                [
+                    "sudo",
+                    "-n",
+                    "/usr/bin/python3",
+                    "/opt/testing-rack/actions.py",
+                    device,
+                    action,
+                ]
+            ).returncode
+        )
     if args.authorize_only:
         print(
             json.dumps(

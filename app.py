@@ -14,7 +14,6 @@ import secrets
 import threading
 import time
 from dataclasses import dataclass
-from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
@@ -516,6 +515,19 @@ class StateStore:
             else f"ssh -p{self.config.gateway_port} -oStrictHostKeyChecking=accept-new {destination}"
         )
         commands = [f"{prefix} {capability}-{name}" for name in lease["devices"]]
+        actions = {}
+        action_commands = {}
+        for name in lease["devices"]:
+            device = next(item for item in self.config.devices if item["name"] == name)
+            available = []
+            if "gpu_power_switch" in device:
+                available.extend(("gpu_power:on", "gpu_power:off"))
+            if "ftdi_serial" in device:
+                available.append("ftdi:reset")
+            actions[name] = available
+            action_commands[name] = [
+                f"{prefix} {capability}-{name} {action}" for action in available
+            ]
         return {
             "capability": capability,
             "display_id": lease["display_id"],
@@ -525,6 +537,8 @@ class StateStore:
             "reservation_url": f"/#reservation={capability}",
             "gateway_command": commands[0],
             "access_commands": commands,
+            "actions": actions,
+            "action_commands": action_commands,
         }
 
     def current(self, capability: str) -> dict[str, Any]:

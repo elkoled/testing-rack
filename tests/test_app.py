@@ -115,6 +115,15 @@ class StoreTest(unittest.TestCase):
         self.assertTrue(result["access_commands"][0].endswith("-NUT001"))
         self.assertTrue(result["access_commands"][1].endswith("-NUT002"))
         self.assertEqual(
+            result["actions"]["NUT001"],
+            ["gpu_power:on", "gpu_power:off", "ftdi:reset"],
+        )
+        self.assertTrue(
+            result["action_commands"]["NUT001"][0].endswith(
+                "-NUT001 gpu_power:on"
+            )
+        )
+        self.assertEqual(
             self.store.resolve(result["capability"], "NUT001")["serial"],
             "00000001",
         )

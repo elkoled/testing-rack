@@ -160,6 +160,13 @@ function show(result) {
     `${result.devices.length} device${result.devices.length === 1 ? "" : "s"} · ${left(result.expires_at)} remaining`,
   )
   setText("reservation-devices", result.devices.join("  ·  "))
+  setText(
+    "controls",
+    Object.entries(result.actions || {})
+      .filter(([, actions]) => actions.length)
+      .map(([device, actions]) => `${device}: ${actions.join(" · ")}`)
+      .join("\n"),
+  )
   setText("command", result.access_commands.join("\n"))
   setText(
     "copy",

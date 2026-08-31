@@ -57,6 +57,7 @@ def main():
                 "unittest",
                 "-v",
                 "tests/test_app.py",
+                "tests/test_actions.py",
                 "tests/test_api.py",
                 "tests/test_gateway.py",
                 "tests/test_ssh.py",
