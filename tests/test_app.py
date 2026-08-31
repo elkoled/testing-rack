@@ -289,7 +289,7 @@ class StoreTest(unittest.TestCase):
             ("a", 1, 60, "abcdefghijklmnop"),
             ("alex", True, 60, "abcdefghijklmnop"),
             ("alex", 4, 60, "abcdefghijklmnop"),
-            ("alex", 1, 31, "abcdefghijklmnop"),
+            ("alex", 1, 0, "abcdefghijklmnop"),
             ("alex", 1, 60, "short"),
         ]
         for args in cases:

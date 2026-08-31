@@ -472,11 +472,12 @@ class StateStore:
             )
         if (
             isinstance(duration, bool)
-            or duration not in ALLOWED_DURATIONS
+            or not isinstance(duration, int)
+            or duration < 1
             or duration > self.config.max_lease_minutes
         ):
             raise RackError(
-                400, "invalid_duration", "Choose one of the offered durations."
+                400, "invalid_duration", "Idle timeout is invalid."
             )
         if not isinstance(key, str) or not IDEMPOTENCY_RE.fullmatch(key):
             raise RackError(400, "invalid_key", "Key is malformed.")

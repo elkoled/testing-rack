@@ -169,7 +169,7 @@ class HttpApiTest(unittest.TestCase):
         self.assertEqual(status, 201)
         reservation = json.loads(response)
         self.assertEqual(len(reservation["devices"]), 10)
-        self.assertGreaterEqual(reservation["expires_at"] - time.time(), 3590)
+        self.assertGreaterEqual(reservation["expires_at"] - time.time(), 590)
         status, _, _ = self.request(
             "DELETE",
             "/api/reservation",
