@@ -1,3 +1,1 @@
-rack ALL=(root) NOPASSWD: /usr/bin/python3 /opt/testing-rack/actions.py NUT??? gpu_power\:on
-rack ALL=(root) NOPASSWD: /usr/bin/python3 /opt/testing-rack/actions.py NUT??? gpu_power\:off
-rack ALL=(root) NOPASSWD: /usr/bin/python3 /opt/testing-rack/actions.py NUT??? ftdi\:reset
+rack ALL=(root) NOPASSWD: /usr/bin/python3 /opt/testing-rack/actions.py
