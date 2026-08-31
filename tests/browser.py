@@ -38,11 +38,16 @@ def run_case(browser, url: str, scenario: str, init_script: str, viewport: str) 
         )
         name = f"chrome-{scenario[:8]}-{viewport[:1]}-{uuid.uuid4().hex[:6]}"
         page.locator("#name").fill(name)
+        page.locator("#matrix .device", has_text="NUT001").click()
+        assert page.locator("#matrix .selected").count() == 0
+        assert page.locator("#count").input_value() == "0"
+        assert page.locator("#reserve").is_disabled()
+        page.locator("#matrix .device", has_text="NUT001").click()
         page.locator("#count").select_option("2")
         assert page.locator("#matrix .selected").count() == 2
         page.locator("#matrix .device", has_text="NUT002").click()
         page.locator("#matrix .device", has_text="NUT004").click()
-        assert page.locator("#selection").inner_text() == "Selected: NUT001 · NUT004"
+        assert page.locator("#matrix .selected b").all_inner_texts() == ["NUT001", "NUT004"]
         started = time.monotonic()
         page.locator("#reserve").click()
         page.locator("#reservation").wait_for(state="visible")

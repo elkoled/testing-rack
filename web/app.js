@@ -77,8 +77,8 @@ async function api(path, options = {}) {
 function setup() {
   if ($("count").options.length) return
   for (const n of Array.from(
-    { length: ui.state.max_devices },
-    (_, index) => index + 1,
+    { length: ui.state.max_devices + 1 },
+    (_, index) => index,
   ))
     $("count").add(new Option(n, n))
   $("count").onchange = () => selectCount(Number($("count").value))
@@ -88,8 +88,6 @@ function buttonLabel() {
   const n = ui.selected.size
   setText("reserve", `Reserve ${n} device${n === 1 ? "" : "s"}`)
   $("reserve").disabled = n === 0
-  setText("selection", `Selected: ${[...ui.selected].join(" · ")}`)
-  $("selection").hidden = ui.reservation !== null
 }
 function readyNames() {
   return ui.state.devices
@@ -127,7 +125,6 @@ function card(device) {
   el.append(name, status)
   el.onclick = () => {
     if (ui.selected.has(device.name)) {
-      if (ui.selected.size === 1) return
       ui.selected.delete(device.name)
     } else {
       ui.selected.add(device.name)
@@ -182,7 +179,6 @@ async function load() {
 }
 function show(result) {
   ui.reservation = result
-  $("selection").hidden = true
   if (ui.state) render()
   rememberToken(result.token)
   ui.fallback = null
