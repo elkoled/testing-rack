@@ -151,6 +151,45 @@ class HttpApiTest(unittest.TestCase):
             "unsupported_media_type",
         )
 
+    def test_maximum_reservation_and_limit_errors(self):
+        body = {
+            "name": "limit-test",
+            "count": 10,
+            "duration_minutes": 1440,
+            "idempotency_key": "http-maximum-key-001",
+        }
+        status, _, response = self.request(
+            "POST",
+            "/api/reservations",
+            json.dumps(body),
+            {"Content-Type": "application/json"},
+        )
+        self.assertEqual(status, 201)
+        reservation = json.loads(response)
+        self.assertEqual(len(reservation["devices"]), 10)
+        self.assertGreaterEqual(reservation["expires_at"] - time.time(), 86390)
+        status, _, _ = self.request(
+            "DELETE",
+            "/api/reservations/current",
+            headers={"X-Testing-Rack-Capability": reservation["capability"]},
+        )
+        self.assertEqual(status, 200)
+        for field, value, code in (
+            ("count", 11, "invalid_count"),
+            ("duration_minutes", 2880, "invalid_duration"),
+        ):
+            invalid = {**body, field: value, "idempotency_key": f"invalid-{field}-key"}
+            self.assert_json_error(
+                self.request(
+                    "POST",
+                    "/api/reservations",
+                    json.dumps(invalid),
+                    {"Content-Type": "application/json"},
+                ),
+                400,
+                code,
+            )
+
     def test_malformed_and_bounded_bodies(self):
         cases = [
             (b"{", {"Content-Type": "application/json"}, 400, "invalid_json"),

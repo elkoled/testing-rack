@@ -733,6 +733,7 @@ class Handler(BaseHTTPRequestHandler):
                             },
                         },
                         "result": "Run a command from access_commands.",
+                        "limits": "Read durations and max_devices from GET /api/state.",
                         "release": {
                             "method": "DELETE",
                             "path": "/api/reservations/current",
