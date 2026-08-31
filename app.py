@@ -770,7 +770,7 @@ class Handler(BaseHTTPRequestHandler):
             raise RackError(413, "body_too_large", "Request body is too large.")
         try:
             value = json.loads(self.rfile.read(length))
-        except json.JSONDecodeError:
+        except (UnicodeDecodeError, json.JSONDecodeError):
             raise RackError(
                 400, "invalid_json", "Request body is not valid JSON."
             ) from None
@@ -916,6 +916,9 @@ class Handler(BaseHTTPRequestHandler):
         self._method_not_allowed()
 
     def do_PATCH(self) -> None:
+        self._method_not_allowed()
+
+    def do_TRACE(self) -> None:
         self._method_not_allowed()
 
     def _file(

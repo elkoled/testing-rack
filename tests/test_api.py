@@ -128,7 +128,7 @@ class HttpApiTest(unittest.TestCase):
         self.assertNotIn("gpu_power_switch", text)
 
     def test_unsupported_methods_are_consistent_json(self):
-        for method in ("PUT", "PATCH", "OPTIONS"):
+        for method in ("PUT", "PATCH", "OPTIONS", "TRACE"):
             with self.subTest(method=method):
                 self.assert_json_error(
                     self.request(method, "/api/state"), 405, "method_not_allowed"
@@ -213,6 +213,7 @@ class HttpApiTest(unittest.TestCase):
     def test_malformed_and_bounded_bodies(self):
         cases = [
             (b"{", {"Content-Type": "application/json"}, 400, "invalid_json"),
+            (b"\xff", {"Content-Type": "application/json"}, 400, "invalid_json"),
             (b"[]", {"Content-Type": "application/json"}, 400, "invalid_body"),
             (b"{}", {"Content-Type": "application/json"}, 400, "invalid_fields"),
             (
