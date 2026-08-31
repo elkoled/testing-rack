@@ -108,6 +108,22 @@ class HttpApiTest(unittest.TestCase):
         ):
             self.assertIn(name, headers)
 
+    def test_agent_instructions_are_complete_and_abstract(self):
+        status, _, body = self.request("GET", "/api/agent")
+        self.assertEqual(status, 200)
+        instructions = json.loads(body)
+        self.assertEqual(instructions["reserve"]["method"], "POST")
+        self.assertEqual(instructions["reserve"]["json"]["count"], 1)
+        self.assertEqual(
+            set(instructions["reserve"]["json"]),
+            {"name", "count", "duration_minutes", "idempotency_key"},
+        )
+        self.assertEqual(instructions["release"]["method"], "DELETE")
+        text = body.decode()
+        self.assertNotIn("serial", text)
+        self.assertNotIn("ftdi", text.lower())
+        self.assertNotIn("gpu_power_switch", text)
+
     def test_unsupported_methods_are_consistent_json(self):
         for method in ("PUT", "PATCH", "OPTIONS"):
             with self.subTest(method=method):
@@ -121,7 +137,7 @@ class HttpApiTest(unittest.TestCase):
     def test_post_requires_json_content_type(self):
         body = json.dumps(
             {
-                "nickname": "alex",
+                "name": "alex",
                 "count": 1,
                 "duration_minutes": 60,
                 "idempotency_key": "http-content-key-001",

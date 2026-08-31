@@ -200,7 +200,7 @@ class VirtualRackIntegrationTest(unittest.TestCase):
             "/api/reservations",
             "POST",
             {
-                "nickname": "virtual-alex",
+                "name": "virtual-alex",
                 "count": 2,
                 "duration_minutes": 60,
                 "idempotency_key": "virtual-integration-key-01",

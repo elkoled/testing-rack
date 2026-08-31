@@ -1,6 +1,6 @@
 <!doctype html><html class="loading" lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>testing-rack</title><link rel="stylesheet" href="/common.css"><link rel="stylesheet" href="/style.css"><script defer src="/app.js"></script></head><body><main>
-<header><h1 id="rack-name">testing-rack</h1><span id="availability">Loading…</span></header>
-<form id="reserve-form" hidden><label>Name<input id="nickname" autocomplete="name" minlength="2" maxlength="32" placeholder="alex" required></label><label>Devices<select id="count"></select></label><label>Duration<select id="duration"></select></label><button id="reserve" type="submit">Reserve device</button></form><p id="message" role="status"></p>
+<header><div><h1 id="rack-name">testing-rack</h1><p id="agent-help"></p></div><span id="availability">Loading…</span></header>
+<form id="reserve-form" hidden><label>Name<input id="name" autocomplete="name" minlength="2" maxlength="32" placeholder="alex" required></label><label>Devices<select id="count"></select></label><label>Duration<select id="duration"></select></label><button id="reserve" type="submit">Reserve device</button></form><p id="message" role="status"></p>
 <section id="reservation" hidden><div><small>YOUR RESERVATION</small><h2 id="reservation-title"></h2></div><div class="access"><small>SSH</small><code id="command"></code><p id="controls"></p><div class="actions"><button id="copy-ssh">Copy SSH</button><button id="release">Release devices</button></div></div></section>
 <section id="matrix" aria-label="Devices"></section><p id="offline" hidden>Rack unavailable. Retrying…</p>
 </main></body></html>

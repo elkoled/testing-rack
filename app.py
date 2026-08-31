@@ -227,7 +227,7 @@ class StateStore:
         for lease in state["leases"]:
             required = {
                 "display_id",
-                "nickname",
+                "name",
                 "devices",
                 "expires_at",
                 "capability_hash",
@@ -398,7 +398,7 @@ class StateStore:
                         "device_type": item["device_type"],
                         "health": health,
                         "state": "reserved" if lease else health,
-                        "nickname": lease["nickname"] if lease else None,
+                        "owner": lease["name"] if lease else None,
                         "expires_at": lease["expires_at"] if lease else None,
                     }
                 )
@@ -426,9 +426,9 @@ class StateStore:
         }
 
     def reserve(
-        self, nickname: Any, count: Any, duration: Any, key: Any
+        self, name: Any, count: Any, duration: Any, key: Any
     ) -> dict[str, Any]:
-        nickname = _validate_nickname(nickname)
+        name = _validate_name(name)
         if (
             isinstance(count, bool)
             or not isinstance(count, int)
@@ -473,7 +473,7 @@ class StateStore:
                     (lease["expires_at"] - lease["created_at"]) / 60
                 )
                 if (
-                    lease["nickname"] != nickname
+                    lease["name"] != name
                     or len(lease["devices"]) != count
                     or original_duration != duration
                 ):
@@ -490,7 +490,7 @@ class StateStore:
                 (
                     lease
                     for lease in self.state["leases"]
-                    if lease["nickname"].casefold() == nickname.casefold()
+                    if lease["name"].casefold() == name.casefold()
                 ),
                 None,
             )
@@ -498,7 +498,7 @@ class StateStore:
                 raise RackError(
                     409,
                     "reservation_exists",
-                    f"{existing['nickname']} already has reservation {existing['display_id']}. Release it before reserving again.",
+                    f"{existing['name']} already has reservation {existing['display_id']}. Release it before reserving again.",
                     display_id=existing["display_id"],
                     expires_at=existing["expires_at"],
                 )
@@ -523,7 +523,7 @@ class StateStore:
             now = self.now()
             lease = {
                 "display_id": secrets.token_hex(2).upper(),
-                "nickname": nickname,
+                "name": name,
                 "devices": ready[:count],
                 "expires_at": now + duration * 60,
                 "capability_hash": self._hash_capability(capability),
@@ -561,7 +561,7 @@ class StateStore:
         return {
             "capability": capability,
             "display_id": lease["display_id"],
-            "nickname": lease["nickname"],
+            "name": lease["name"],
             "devices": devices,
             "expires_at": lease["expires_at"],
             "reservation_url": f"/#reservation={capability}",
@@ -616,13 +616,13 @@ class StateStore:
             return result
 
 
-def _validate_nickname(value: Any) -> str:
+def _validate_name(value: Any) -> str:
     if not isinstance(value, str):
-        raise RackError(400, "invalid_nickname", "Nickname is required.")
+        raise RackError(400, "invalid_name", "Name is required.")
     value = value.strip()
     if not 2 <= len(value) <= 32 or not value.isprintable():
         raise RackError(
-            400, "invalid_nickname", "Nickname must be 2–32 printable characters."
+            400, "invalid_name", "Name must be 2–32 printable characters."
         )
     return value
 
@@ -711,6 +711,29 @@ class Handler(BaseHTTPRequestHandler):
             path = urlparse(self.path).path
             if path == "/api/state":
                 self._json(200, self.store.public_state())
+            elif path == "/api/agent":
+                self._json(
+                    200,
+                    {
+                        "purpose": "Reserve exclusive test-device access.",
+                        "reserve": {
+                            "method": "POST",
+                            "path": "/api/reservations",
+                            "json": {
+                                "name": "your name",
+                                "count": 1,
+                                "duration_minutes": 60,
+                                "idempotency_key": "unique string of at least 16 characters",
+                            },
+                        },
+                        "result": "Run a command from access_commands.",
+                        "release": {
+                            "method": "DELETE",
+                            "path": "/api/reservations/current",
+                            "header": "X-Testing-Rack-Capability: capability from reservation",
+                        },
+                    },
+                )
             elif path.startswith("/api/devices/"):
                 self._json(200, self.store.device(path.removeprefix("/api/devices/")))
             elif path == "/api/reservations/current":
@@ -740,7 +763,7 @@ class Handler(BaseHTTPRequestHandler):
         try:
             path, body = urlparse(self.path).path, self._body()
             if path == "/api/reservations":
-                allowed = {"nickname", "count", "duration_minutes", "idempotency_key"}
+                allowed = {"name", "count", "duration_minutes", "idempotency_key"}
                 if set(body) != allowed:
                     raise RackError(
                         400, "invalid_fields", "Reservation fields are invalid."
@@ -748,7 +771,7 @@ class Handler(BaseHTTPRequestHandler):
                 self._json(
                     201,
                     self.store.reserve(
-                        body["nickname"],
+                        body["name"],
                         body["count"],
                         body["duration_minutes"],
                         body["idempotency_key"],

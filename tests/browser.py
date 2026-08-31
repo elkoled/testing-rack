@@ -33,8 +33,11 @@ def run_case(browser, url: str, scenario: str, init_script: str, viewport: str) 
         page.goto(url, wait_until="networkidle")
         assert page.locator("#matrix .device").count() > 0
         assert page.locator("#rack-name").inner_text() == "chestnut_rack"
+        assert page.locator("#agent-help").inner_text() == (
+            "Agent prompt: Reserve 1 device at http://chestnut/api/agent as NAME."
+        )
         name = f"chrome-{scenario[:8]}-{viewport[:1]}-{uuid.uuid4().hex[:6]}"
-        page.locator("#nickname").fill(name)
+        page.locator("#name").fill(name)
         page.locator("#count").select_option("1")
         page.locator("#duration").select_option("60")
         started = time.monotonic()
@@ -94,7 +97,7 @@ def run_case(browser, url: str, scenario: str, init_script: str, viewport: str) 
 
 
 def reserve(page, name: str) -> None:
-    page.locator("#nickname").fill(name)
+    page.locator("#name").fill(name)
     page.locator("#count").select_option("1")
     page.locator("#duration").select_option("60")
     page.locator("#reserve").click()
@@ -116,7 +119,7 @@ def run_interleavings(browser, url: str) -> None:
     b.goto(url, wait_until="networkidle")
     name = "tabs-" + uuid.uuid4().hex[:8]
     for page in (a, b):
-        page.locator("#nickname").fill(name)
+        page.locator("#name").fill(name)
         page.locator("#count").select_option("1")
         page.locator("#duration").select_option("60")
     a.locator("#reserve").click(no_wait_after=True)
@@ -153,7 +156,7 @@ def run_interleavings(browser, url: str) -> None:
     page = context.new_page()
     page.goto(url, wait_until="networkidle")
     name = "repeat-" + uuid.uuid4().hex[:8]
-    page.locator("#nickname").fill(name)
+    page.locator("#name").fill(name)
     page.evaluate(
         """() => {
           const form = document.querySelector('#reserve-form')

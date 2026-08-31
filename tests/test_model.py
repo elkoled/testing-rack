@@ -152,7 +152,7 @@ class ReservationMachine(RuleBasedStateMachine):
             for device in lease["devices"]
         }
         actual = {
-            device["name"]: device["nickname"]
+            device["name"]: device["owner"]
             for device in public["devices"]
             if device["state"] == "reserved"
         }

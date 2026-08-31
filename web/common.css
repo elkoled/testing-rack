@@ -3,3 +3,4 @@
 [hidden]{display:none!important}
 html.loading body{visibility:hidden}
 .device.offline{filter:grayscale(1);opacity:.45}
+#agent-help{margin:6px 0 0;color:var(--muted);font:13px monospace}

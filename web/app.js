@@ -106,7 +106,7 @@ function card(device) {
   name.textContent = device.name
   status.textContent =
     state === "reserved"
-      ? `${device.nickname} · ${left(device.expires_at)}`
+      ? `${device.owner} · ${left(device.expires_at)}`
       : state
   el.append(name, status)
   return el
@@ -129,6 +129,10 @@ async function load() {
   try {
     ui.state = await api("/api/state")
     setText("rack-name", ui.state.display_name)
+    setText(
+      "agent-help",
+      `Agent prompt: Reserve 1 device at http://${ui.state.gateway_host}/api/agent as NAME.`,
+    )
     document.title = ui.state.display_name
     $("offline").hidden = true
     setup()
@@ -161,7 +165,7 @@ function show(result) {
   $("reserve-form").hidden = true
   setText(
     "reservation-title",
-    `${result.nickname} · ${result.devices.length} device${result.devices.length === 1 ? "" : "s"} · ${left(result.expires_at)} remaining`,
+    `${result.name} · ${result.devices.length} device${result.devices.length === 1 ? "" : "s"} · ${left(result.expires_at)} remaining`,
   )
   const actions = [...new Set(Object.values(result.actions || {}).flat())]
   setText("command", result.access_commands.join("\n"))
@@ -196,15 +200,15 @@ $("reserve-form").onsubmit = async (event) => {
   ui.busy = true
   $("reserve").disabled = true
   setText("message", "Reserving…")
-  const nickname = $("nickname").value.trim()
+  const name = $("name").value.trim()
   try {
-    localStorage.setItem("testing-rack-name", nickname)
+    localStorage.setItem("testing-rack-name", name)
   } catch {}
   try {
     const result = await api("/api/reservations", {
       method: "POST",
       body: JSON.stringify({
-        nickname,
+        name,
         count: Number($("count").value),
         duration_minutes: Number($("duration").value),
         idempotency_key: idempotencyKey(),
@@ -273,7 +277,7 @@ $("release").onclick = async () => {
   }
 }
 try {
-  $("nickname").value = localStorage.getItem("testing-rack-name") || ""
+  $("name").value = localStorage.getItem("testing-rack-name") || ""
 } catch {}
 load()
 setInterval(load, 5000)
