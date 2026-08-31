@@ -44,6 +44,7 @@ def run_case(browser, url: str, scenario: str, init_script: str, viewport: str) 
             "ssh rack@chestnut "
         ) and command.endswith(tuple(f"-NUT{i:03d}" for i in range(1, 1000)))
         assert page.locator("#reserve-form").is_hidden()
+        assert "restoring" in (page.locator("html").get_attribute("class") or "").split()
         assert page.locator("#controls").inner_text() == (
             "Append for actions: gpu_power:on · gpu_power:off · ftdi:reset"
         )
@@ -64,6 +65,9 @@ def run_case(browser, url: str, scenario: str, init_script: str, viewport: str) 
         page.locator("#release").click()
         page.locator("#reservation").wait_for(state="hidden")
         assert page.locator("#reserve-form").is_visible()
+        assert "restoring" not in (
+            page.locator("html").get_attribute("class") or ""
+        ).split()
         assert page.evaluate("localStorage.getItem('testing-rack-capability')") is None
         # A stale local credential must self-heal rather than trapping the browser.
         page.evaluate("localStorage.setItem('testing-rack-capability','111111111111')")

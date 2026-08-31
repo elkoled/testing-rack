@@ -135,7 +135,7 @@ async function load() {
       $("reserve-form").hidden = false
       history.replaceState(null, "", location.pathname)
     }
-    document.documentElement.classList.remove("restoring")
+    document.documentElement.classList.toggle("restoring", Boolean(ui.reservation))
   } catch (error) {
     $("offline").hidden = false
     setText("offline", `${error.message} Retrying…`)
@@ -186,6 +186,7 @@ async function refresh() {
     rememberCapability(null)
     $("reservation").hidden = true
     $("reserve-form").hidden = false
+    document.documentElement.classList.remove("restoring")
     history.replaceState(null, "", location.pathname)
   }
 }
@@ -284,6 +285,7 @@ addEventListener("storage", (event) => {
     if (!event.newValue) {
       $("reservation").hidden = true
       $("reserve-form").hidden = false
+      document.documentElement.classList.remove("restoring")
       history.replaceState(null, "", location.pathname)
     }
     load()

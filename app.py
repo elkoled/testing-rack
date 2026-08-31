@@ -514,9 +514,12 @@ class StateStore:
             if self.config.gateway_port == 22
             else f"ssh -p{self.config.gateway_port} -oStrictHostKeyChecking=accept-new {destination}"
         )
-        commands = [f"{prefix} {capability}-{name}" for name in lease["devices"]]
+        devices = sorted(
+            lease["devices"], key=lambda name: int(NAME_RE.fullmatch(name).group(1))
+        )
+        commands = [f"{prefix} {capability}-{name}" for name in devices]
         actions = {}
-        for name in lease["devices"]:
+        for name in devices:
             device = next(item for item in self.config.devices if item["name"] == name)
             available = []
             if "gpu_power_switch" in device:
@@ -528,7 +531,7 @@ class StateStore:
             "capability": capability,
             "display_id": lease["display_id"],
             "nickname": lease["nickname"],
-            "devices": lease["devices"],
+            "devices": devices,
             "expires_at": lease["expires_at"],
             "reservation_url": f"/#reservation={capability}",
             "gateway_command": commands[0],
@@ -554,7 +557,12 @@ class StateStore:
             for name in lease["devices"]:
                 candidate["last_released"][name] = now
             self._persist(candidate)
-            return {"released": lease["devices"]}
+            return {
+                "released": sorted(
+                    lease["devices"],
+                    key=lambda name: int(NAME_RE.fullmatch(name).group(1)),
+                )
+            }
 
     def resolve(self, capability: str, name: Any) -> dict[str, Any]:
         if not isinstance(name, str) or not NAME_RE.fullmatch(name):
