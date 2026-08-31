@@ -80,12 +80,12 @@ def main():
         return
     else:
         remaining = max(0, int((reservation["expires_at"] - time.time()) / 60))
+        serial_console = "available" if target.get("ftdi_serial") else "not installed"
+        gpu_power = "available" if target.get("gpu_power_switch") else "not installed"
         print(
             f"testing-rack · {device} · {remaining}m remaining\n"
-            f"serial {target['serial']}\n"
-            f"FTDI {target.get('ftdi_serial', 'not installed')}\n"
-            f"GPU power {target.get('gpu_power_switch', 'not installed')}\n"
-            f"Connecting to comma-{target['serial']}...",
+            f"Device shell · serial console {serial_console} · GPU power {gpu_power}\n"
+            "Connecting...",
             flush=True,
         )
         raise SystemExit(

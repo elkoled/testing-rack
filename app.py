@@ -385,11 +385,9 @@ class StateStore:
         device = next((x for x in state["devices"] if x["name"] == name), None)
         if device is None:
             raise RackError(404, "not_found", "Device does not exist.")
-        configured = next(x for x in self.config.devices if x["name"] == name)
         meta = self.state["metadata"].get(name, {})
         return {
             **device,
-            "serial": configured["serial"],
             "metadata": meta,
         }
 
