@@ -38,6 +38,8 @@ class StoreTest(unittest.TestCase):
                             "name": f"NUT{i:03d}",
                             "device_type": "four",
                             "serial": f"{i:08x}",
+                            "ftdi_serial": f"FTDI{i:04d}",
+                            "gpu_power_switch": f"gpu_{i:03d}",
                         }
                         for i in range(1, 4)
                     ],
@@ -116,6 +118,9 @@ class StoreTest(unittest.TestCase):
             self.store.resolve(result["capability"], "NUT001")["serial"],
             "00000001",
         )
+        resolved = self.store.resolve(result["capability"], "NUT001")
+        self.assertEqual(resolved["ftdi_serial"], "FTDI0001")
+        self.assertEqual(resolved["gpu_power_switch"], "gpu_001")
         with self.assertRaises(RackError) as caught:
             self.store.resolve(result["capability"], "NUT003")
         self.assertEqual(caught.exception.status, 403)
@@ -255,6 +260,27 @@ class StoreTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "duplicate serial"):
             Config.load(path)
 
+    def test_duplicate_optional_hardware_mapping_is_rejected(self):
+        for field in ("ftdi_serial", "gpu_power_switch"):
+            with self.subTest(field=field):
+                devices = [dict(device) for device in self.config.devices]
+                devices[1][field] = devices[0][field]
+                path = Path(self.tmp.name) / f"duplicate-{field}.json"
+                path.write_text(
+                    json.dumps(
+                        {
+                            "gateway_host": self.config.gateway_host,
+                            "gateway_port": self.config.gateway_port,
+                            "default_lease_minutes": self.config.default_lease_minutes,
+                            "max_lease_minutes": self.config.max_lease_minutes,
+                            "max_devices_per_reservation": self.config.max_devices_per_reservation,
+                            "devices": devices,
+                        }
+                    )
+                )
+                with self.assertRaisesRegex(ValueError, f"duplicate {field}"):
+                    Config.load(path)
+
 
 class CliTest(unittest.TestCase):
     def test_init_command_creates_explicit_state(self):
@@ -300,6 +326,7 @@ class ScaleTest(unittest.TestCase):
                                 "name": f"NUT{i:03d}",
                                 "device_type": "four",
                                 "serial": f"{i:08x}",
+                                "ftdi_serial": f"FTDI{i:04d}",
                             }
                             for i in range(1, 101)
                         ],

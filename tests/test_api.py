@@ -95,7 +95,10 @@ class HttpApiTest(unittest.TestCase):
     def test_security_headers_and_public_state(self):
         status, headers, body = self.request("GET", "/api/state")
         self.assertEqual(status, 200)
-        self.assertEqual(len(json.loads(body)["devices"]), 24)
+        self.assertEqual(
+            len(json.loads(body)["devices"]),
+            len(json.loads((ROOT / "config.json").read_text())["devices"]),
+        )
         for name in (
             "Cache-Control",
             "X-Content-Type-Options",

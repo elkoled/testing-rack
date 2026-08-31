@@ -47,17 +47,20 @@ class VirtualRackIntegrationTest(unittest.TestCase):
                             "name": "NUT001",
                             "device_type": "four",
                             "serial": "00000001",
+                            "ftdi_serial": "FTDI0001",
                         },
                         # Deliberately absent: verifies graceful device-unavailable behavior.
                         {
                             "name": "NUT002",
                             "device_type": "four",
                             "serial": "00000002",
+                            "ftdi_serial": "FTDI0002",
                         },
                         {
                             "name": "NUT003",
                             "device_type": "four",
                             "serial": "00000003",
+                            "ftdi_serial": "FTDI0003",
                         },
                     ],
                 }

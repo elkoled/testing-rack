@@ -23,6 +23,7 @@ from urllib.parse import urlparse
 
 NAME_RE = re.compile(r"NUT([0-9]+)$")
 SERIAL_RE = re.compile(r"[0-9a-f]{8}$")
+FTDI_SERIAL_RE = re.compile(r"[A-Z0-9]{8}$")
 IDEMPOTENCY_RE = re.compile(r"[A-Za-z0-9_-]{16,128}$")
 BASE58 = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
 CAPABILITY_RE = re.compile(
@@ -88,14 +89,22 @@ class Config:
             raise ValueError("lease limits must use supported durations")
         if not isinstance(raw["devices"], list) or not raw["devices"]:
             raise ValueError("devices must be a non-empty list")
-        names, serials, devices = set(), set(), []
+        names, serials, ftdi_serials, gpu_power_switches, devices = (
+            set(),
+            set(),
+            set(),
+            set(),
+            [],
+        )
         for item in raw["devices"]:
-            if not isinstance(item, dict) or set(item) != {
-                "name",
-                "device_type",
-                "serial",
-            }:
-                raise ValueError("every device needs name, model, and serial")
+            required_fields = {"name", "device_type", "serial"}
+            optional_fields = {"ftdi_serial", "gpu_power_switch"}
+            if (
+                not isinstance(item, dict)
+                or not required_fields.issubset(item)
+                or not set(item).issubset(required_fields | optional_fields)
+            ):
+                raise ValueError("every device needs name, device_type, and serial")
             if not NAME_RE.fullmatch(item["name"]):
                 raise ValueError(f"invalid device name: {item['name']!r}")
             for key in item:
@@ -103,10 +112,26 @@ class Config:
                     raise ValueError(f"{item['name']} has an invalid {key}")
             if not SERIAL_RE.fullmatch(item["serial"]):
                 raise ValueError(f"{item['name']} has an invalid serial")
+            if "ftdi_serial" in item and not FTDI_SERIAL_RE.fullmatch(
+                item["ftdi_serial"]
+            ):
+                raise ValueError(f"{item['name']} has an invalid ftdi_serial")
+            if "gpu_power_switch" in item and not re.fullmatch(
+                r"[a-z0-9][a-z0-9_-]{0,31}", item["gpu_power_switch"]
+            ):
+                raise ValueError(f"{item['name']} has an invalid gpu_power_switch")
             for value, seen, label in (
                 (item["name"], names, "name"),
                 (item["serial"], serials, "serial"),
+                (item.get("ftdi_serial"), ftdi_serials, "ftdi_serial"),
+                (
+                    item.get("gpu_power_switch"),
+                    gpu_power_switches,
+                    "gpu_power_switch",
+                ),
             ):
+                if value is None:
+                    continue
                 if value in seen:
                     raise ValueError(f"duplicate {label}: {value}")
                 seen.add(value)
@@ -535,11 +560,15 @@ class StateStore:
                     403, "not_reserved", "That device is not part of this reservation."
                 )
             device = next(d for d in self.config.devices if d["name"] == name)
-            return {
+            result = {
                 "name": name,
                 "serial": device["serial"],
                 "health": self._effective_health(name),
             }
+            for key in ("ftdi_serial", "gpu_power_switch"):
+                if key in device:
+                    result[key] = device[key]
+            return result
 
 
 def _validate_nickname(value: Any) -> str:

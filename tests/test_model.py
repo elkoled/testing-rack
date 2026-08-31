@@ -38,6 +38,7 @@ class ReservationMachine(RuleBasedStateMachine):
                             "name": f"NUT{i:03d}",
                             "device_type": "four",
                             "serial": f"{i:08x}",
+                            "ftdi_serial": f"FTDI{i:04d}",
                         }
                         for i in range(1, 9)
                     ],

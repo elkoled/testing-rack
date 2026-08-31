@@ -16,6 +16,7 @@ class GatewayTest(unittest.TestCase):
         target = {
             "name": "NUT001",
             "serial": "6f9f27a9",
+            "ftdi_serial": "DK0CFVDW",
             "health": "ready",
         }
         completed = mock.Mock(returncode=0)
