@@ -13,7 +13,7 @@ from app import Config
 
 POWER_PYTHON = "/home/batman/.venvs/kasa-patterns/bin/python3"
 POWER_HELPER = "/home/batman/tici_test_scripts/chestnut/rack_power_target.py"
-FTDI_PYTHON = "/home/batman/asm2464pd-firmware/.venv/bin/python"
+FTDI_PYTHON = "/usr/bin/python3"
 FTDI_HELPER = "/home/batman/asm2464pd-firmware/ftdi_debug.py"
 LOCK_DIR = Path("/var/lib/testing-rack-gateway/actions")
 Runner = Callable[..., subprocess.CompletedProcess]
