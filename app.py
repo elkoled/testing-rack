@@ -585,7 +585,7 @@ class StateStore:
             lease["devices"], key=lambda name: int(NAME_RE.fullmatch(name).group(1))
         )
         commands = [
-            f"{prefix} -oSetEnv=RACK_ACCESS={capability}-{name}"
+            f"{prefix} -oSetEnv=R={capability}-{name}"
             for name in devices
         ]
         actions = {}

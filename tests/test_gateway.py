@@ -151,7 +151,7 @@ class GatewayTest(unittest.TestCase):
             mock.patch.dict(
                 os.environ,
                 {
-                    "RACK_ACCESS": "7Km3P9xQvT2w-NUT001",
+                    "R": "7Km3P9xQvT2w-NUT001",
                     "SSH_ORIGINAL_COMMAND": "uname -a",
                 },
                 clear=False,

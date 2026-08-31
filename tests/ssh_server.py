@@ -94,7 +94,7 @@ async def handle(
     services: list[str],
     virtual_device_port: int | None,
 ) -> None:
-    access = process.env.get("RACK_ACCESS")
+    access = process.env.get("R")
     if access:
         selector = access
         remote_command = process.command or ""

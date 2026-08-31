@@ -295,7 +295,7 @@ class VirtualRackIntegrationTest(unittest.TestCase):
         agent = self.ssh_tokens(["rack@localhost", selector], agent=True)
         self.assertEqual(agent.returncode, 0, agent.stderr)
 
-        setenv = f"-oSetEnv=RACK_ACCESS={selector}"
+        setenv = f"-oSetEnv=R={selector}"
         setenv_explicit = self.ssh_tokens(
             ["rack@localhost", setenv, "-i", str(self.client_key)]
         )

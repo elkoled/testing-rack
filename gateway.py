@@ -52,7 +52,7 @@ def main():
     parser.add_argument("--authorize-only", action="store_true")
     args = parser.parse_args()
     original = os.environ.get("SSH_ORIGINAL_COMMAND", "")
-    access = os.environ.get("RACK_ACCESS")
+    access = os.environ.get("R")
     if access:
         match = DIRECT_RE.fullmatch(access)
         if not match or match.group(3) is not None:

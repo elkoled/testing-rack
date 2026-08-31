@@ -196,7 +196,7 @@ class StoreTest(unittest.TestCase):
         self.assertTrue(argument.endswith("-NUT001"))
         self.assertRegex(
             argument,
-            r"^-oSetEnv=RACK_ACCESS=[1-9A-HJ-NP-Za-km-z]{12}-NUT001$",
+            r"^-oSetEnv=R=[1-9A-HJ-NP-Za-km-z]{12}-NUT001$",
         )
 
     def test_expiry_invalidates_capability_and_frees_devices(self):
