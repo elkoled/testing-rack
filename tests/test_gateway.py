@@ -71,6 +71,33 @@ class GatewayTest(unittest.TestCase):
             run.call_args.args[0][-2:], ["NUT001", "gpu_power:off"]
         )
 
+    def test_remote_command_is_forwarded_without_local_shell(self):
+        target = {
+            "name": "NUT001",
+            "serial": "6f9f27a9",
+            "health": "ready",
+            "expires_at": time.time() + 3600,
+            "display_name": "chestnut_rack",
+        }
+        completed = mock.Mock(returncode=7)
+        command = "printf '%s\\n' agent-ok && uname -a"
+        with (
+            mock.patch.object(sys, "argv", ["gateway.py"]),
+            mock.patch.dict(
+                os.environ,
+                {"SSH_ORIGINAL_COMMAND": f"7Km3P9xQvT2w-NUT001 {command}"},
+                clear=False,
+            ),
+            mock.patch.object(gateway, "request", return_value=target),
+            mock.patch.object(gateway.subprocess, "run", return_value=completed) as run,
+            mock.patch.object(sys, "stderr", io.StringIO()),
+            self.assertRaises(SystemExit) as stopped,
+        ):
+            gateway.main()
+        self.assertEqual(stopped.exception.code, 7)
+        self.assertEqual(run.call_args.args[0][-2:], ["comma@comma-6f9f27a9", command])
+        self.assertNotIn("shell", run.call_args.kwargs)
+
 
 if __name__ == "__main__":
     unittest.main()

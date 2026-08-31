@@ -7,7 +7,6 @@ import argparse
 import asyncio
 import json
 import re
-import shlex
 import urllib.error
 import urllib.request
 from pathlib import Path
@@ -86,10 +85,8 @@ async def handle(
     services: list[str],
     virtual_device_port: int | None,
 ) -> None:
-    try:
-        parts = shlex.split(process.command or "")
-    except ValueError:
-        parts = []
+    selector, separator, remote_command = (process.command or "").partition(" ")
+    parts = [selector] if selector else []
     modern = (
         re.fullmatch(r"([1-9A-HJ-NP-Za-km-z]{12})-(NUT[0-9]+)", parts[0])
         if len(parts) == 1
@@ -149,6 +146,7 @@ async def handle(
                 "expires_at": reservation["expires_at"],
                 "mode": "virtual-device" if identity else "simulation",
                 "target_identity": identity,
+                "remote_command": remote_command if separator else None,
                 "message": "Gateway reached and verified the virtual four."
                 if identity
                 else "Gateway access works; real device forwarding remains disabled.",

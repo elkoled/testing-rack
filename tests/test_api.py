@@ -121,6 +121,7 @@ class HttpApiTest(unittest.TestCase):
         self.assertIn("Idempotency-Key", instructions["reserve"]["headers"])
         self.assertEqual(instructions["read"]["path"], "/api/reservation")
         self.assertEqual(instructions["release"]["method"], "DELETE")
+        self.assertIn("Standard input is streamed", instructions["remote_command"])
         text = body.decode()
         self.assertNotIn("serial", text)
         self.assertNotIn("ftdi", text.lower())

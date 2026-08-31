@@ -743,6 +743,11 @@ class Handler(BaseHTTPRequestHandler):
                             },
                         },
                         "result": "Save token and run a command from access_commands.",
+                        "remote_command": (
+                            "Append a quoted command to an access_commands value, "
+                            "for example: <access_command> 'uname -a'. Standard input "
+                            "is streamed."
+                        ),
                         "limits": "Read hours and max_devices from GET /api/state.",
                         "read": {
                             "method": "GET",

@@ -14,7 +14,7 @@ import urllib.request
 import re
 
 DIRECT_RE = re.compile(
-    r"([1-9A-HJ-NP-Za-km-z]{12})-(NUT[0-9]+)(?: (gpu_power:(?:on|off)|ftdi:reset))?$"
+    r"([1-9A-HJ-NP-Za-km-z]{12})-(NUT[0-9]+)(?: (.+))?$"
 )
 PREVIOUS_RE = re.compile(
     r"(NUT[0-9]+)-([0123456789ABCDEFGHJKMNPQRSTVWXYZ]{4})-([0123456789ABCDEFGHJKMNPQRSTVWXYZ]{4})-([0123456789ABCDEFGHJKMNPQRSTVWXYZ]{4})-([0123456789ABCDEFGHJKMNPQRSTVWXYZ]{4})$"
@@ -51,14 +51,14 @@ def main():
         LEGACY_RE.fullmatch(original),
     )
     if match:
-        capability, device, action = match.groups()
+        capability, device, remote_command = match.groups()
     elif previous:
         device, *groups = previous.groups()
         capability = "".join(groups)
-        action = None
+        remote_command = None
     elif legacy:
         capability, device = legacy.groups()
-        action = None
+        remote_command = None
     else:
         raise SystemExit("Usage: ssh rack@chestnut.comma.internal 7Km3P9xQvT2w-NUT001")
     target = request(
@@ -71,7 +71,7 @@ def main():
         f"{target.get('display_name', 'testing-rack')} · {device} · {minutes} min remaining",
         file=sys.stderr,
     )
-    if action:
+    if remote_command in {"gpu_power:on", "gpu_power:off", "ftdi:reset"}:
         raise SystemExit(
             subprocess.run(
                 [
@@ -80,7 +80,7 @@ def main():
                     "/usr/bin/python3",
                     "/opt/testing-rack/actions.py",
                     device,
-                    action,
+                    remote_command,
                 ]
             ).returncode
         )
@@ -130,6 +130,7 @@ def main():
                     "-o",
                     "ClearAllForwardings=yes",
                     f"comma@comma-{target['serial']}",
+                    *([remote_command] if remote_command else []),
                 ]
             ).returncode
         )

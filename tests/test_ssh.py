@@ -219,6 +219,10 @@ class VirtualRackIntegrationTest(unittest.TestCase):
         self.assertEqual(payload["target_identity"]["serial"], "00000001")
         self.assertEqual(payload["target_identity"]["hardware"], "four")
 
+        commanded = self.ssh(f"{capability}-NUT001 printf agent-ok")
+        self.assertEqual(commanded.returncode, 0, commanded.stderr)
+        self.assertEqual(json.loads(commanded.stdout)["remote_command"], "printf agent-ok")
+
         unavailable = self.ssh(f"{capability}-NUT002")
         self.assertEqual(unavailable.returncode, 4)
         self.assertIn("reservation remains active", unavailable.stderr)
