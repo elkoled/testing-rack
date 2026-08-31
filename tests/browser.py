@@ -32,7 +32,7 @@ def run_case(browser, url: str, scenario: str, init_script: str, viewport: str) 
     try:
         page.goto(url, wait_until="networkidle")
         assert page.locator("#matrix .device").count() > 0
-        assert page.locator("#rack-name").inner_text() == "chestnut-rack"
+        assert page.locator("#rack-name").inner_text() == "chestnut_rack"
         name = f"chrome-{scenario[:8]}-{viewport[:1]}-{uuid.uuid4().hex[:6]}"
         page.locator("#nickname").fill(name)
         page.locator("#count").select_option("1")
@@ -49,11 +49,13 @@ def run_case(browser, url: str, scenario: str, init_script: str, viewport: str) 
             page.locator("html").get_attribute("class") or ""
         ).split()
         context_text = page.evaluate("contextText()")
-        assert context_text.startswith("chestnut-rack · 1 device · ")
-        assert "ssh rack@chestnut" not in context_text
-        assert "\nActions: append gpu_power:on | gpu_power:off | ftdi:reset" in context_text
+        assert context_text.startswith("Reserved NUT")
+        assert " on chestnut_rack for " in context_text
+        assert "open a shell on its assigned test device" in context_text
+        assert "Actions: gpu_power:on, gpu_power:off, ftdi:reset" in context_text
+        assert "\nExample: ssh rack@chestnut " in context_text
         assert context_text.endswith(
-            "Use assigned NUT devices through the rack gateway only."
+            "Access stops when the reservation expires. Use only these gateway commands."
         )
         assert page.locator("#context").inner_text() == context_text
         assert page.locator("#copy-ssh").inner_text() == "Copy SSH"

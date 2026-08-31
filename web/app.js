@@ -165,11 +165,20 @@ function contextText() {
   const result = ui.reservation
   const actions = [...new Set(Object.values(result.actions || {}).flat())]
   const lines = [
-    `${ui.state.display_name} · ${result.devices.length} device${result.devices.length === 1 ? "" : "s"} · ${left(result.expires_at)} remaining`,
+    `Reserved ${result.devices.join(", ")} on ${ui.state.display_name} for ${left(result.expires_at)} more.`,
+    "Run an SSH command above to open a shell on its assigned test device.",
   ]
-  if (actions.length)
-    lines.push(`Actions: append ${actions.join(" | ")}`)
-  lines.push("Use assigned NUT devices through the rack gateway only.")
+  if (actions.length) {
+    lines.push(
+      "Append an action to the same command to control that device without opening a shell.",
+      `Actions: ${actions.join(", ")}`,
+    )
+    if (actions.includes("gpu_power:on"))
+      lines.push(`Example: ${result.access_commands[0]} gpu_power:on`)
+  }
+  lines.push(
+    "Access stops when the reservation expires. Use only these gateway commands.",
+  )
   return lines.join("\n")
 }
 async function refresh() {

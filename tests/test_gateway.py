@@ -16,7 +16,7 @@ class GatewayTest(unittest.TestCase):
             "ftdi_serial": "DK0CFVDW",
             "health": "ready",
             "expires_at": time.time() + 3600,
-            "display_name": "chestnut-rack",
+            "display_name": "chestnut_rack",
         }
         completed = mock.Mock(returncode=0)
         with (
@@ -37,7 +37,7 @@ class GatewayTest(unittest.TestCase):
         self.assertEqual(run.call_args.args[0][-1], "comma@comma-6f9f27a9")
         self.assertNotIn("-tt", run.call_args.args[0])
         self.assertRegex(
-            stderr.getvalue(), r"^chestnut-rack · NUT001 · (59|60) min remaining\n$"
+            stderr.getvalue(), r"^chestnut_rack · NUT001 · (59|60) min remaining\n$"
         )
 
     def test_hardware_action_is_scoped_and_delegated(self):
@@ -48,7 +48,7 @@ class GatewayTest(unittest.TestCase):
             "gpu_power_switch": "lower_1",
             "health": "ready",
             "expires_at": time.time() + 3600,
-            "display_name": "chestnut-rack",
+            "display_name": "chestnut_rack",
         }
         completed = mock.Mock(returncode=0)
         with (

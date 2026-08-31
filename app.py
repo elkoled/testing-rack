@@ -68,7 +68,7 @@ class Config:
             raise ValueError("config fields are invalid")
         display_name = raw.get("display_name", "testing-rack")
         if not isinstance(display_name, str) or not re.fullmatch(
-            r"[a-z0-9][a-z0-9-]{0,31}", display_name
+            r"[a-z0-9][a-z0-9_-]{0,31}", display_name
         ):
             raise ValueError("display_name is invalid")
         if not isinstance(raw["gateway_host"], str) or not raw["gateway_host"].strip():
