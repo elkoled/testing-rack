@@ -193,6 +193,7 @@ class StateStore:
         self.state = self._load_state()
         with self.lock:
             self._expire_and_persist_if_needed()
+            self._cap_idle_deadlines()
 
     @staticmethod
     def initialize(state_path: Path, secret_path: Path) -> None:
@@ -346,6 +347,17 @@ class StateStore:
     def _expire_and_persist_if_needed(self) -> None:
         candidate = copy.deepcopy(self.state)
         if self._expire(candidate, self.now()):
+            self._persist(candidate)
+
+    def _cap_idle_deadlines(self) -> None:
+        candidate = copy.deepcopy(self.state)
+        deadline = self.now() + self.config.idle_timeout_minutes * 60
+        changed = False
+        for lease in candidate["leases"]:
+            if lease["expires_at"] > deadline:
+                lease["expires_at"] = deadline
+                changed = True
+        if changed:
             self._persist(candidate)
 
     def _persist(self, candidate: dict[str, Any]) -> None:

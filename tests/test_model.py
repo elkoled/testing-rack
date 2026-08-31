@@ -141,6 +141,9 @@ class ReservationMachine(RuleBasedStateMachine):
     @rule()
     def restart(self):
         self.expire_model()
+        idle_deadline = self.clock.value + self.config.idle_timeout_minutes * 60
+        for lease in self.model.values():
+            lease["expires"] = min(lease["expires"], idle_deadline)
         self.store = StateStore(self.config, self.state, self.secret, self.clock)
 
     @invariant()

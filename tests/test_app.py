@@ -202,6 +202,12 @@ class StoreTest(unittest.TestCase):
             restarted.current(result["token"])["devices"], result["devices"]
         )
 
+    def test_restart_caps_legacy_deadline_to_idle_timeout(self):
+        result = self.store.reserve("alex", 1, 1440, "legacy-deadline-key")
+        restarted = StateStore(self.config, self.state, self.secret, self.clock)
+        current = restarted.current(result["token"])
+        self.assertEqual(current["expires_at"], self.clock.value + 3600)
+
     def test_failed_atomic_commit_never_changes_memory_or_current_disk_state(self):
         before_memory = json.loads(json.dumps(self.store.state))
         before_disk = self.state.read_bytes()
