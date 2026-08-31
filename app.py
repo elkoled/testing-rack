@@ -577,9 +577,9 @@ class StateStore:
     ) -> dict[str, Any]:
         destination = f"rack@{self.config.gateway_host}"
         prefix = (
-            f"ssh {destination}"
+            f"ssh -i ~/.ssh/xx_key {destination}"
             if self.config.gateway_port == 22
-            else f"ssh -p{self.config.gateway_port} -oStrictHostKeyChecking=accept-new {destination}"
+            else f"ssh -i ~/.ssh/xx_key -p{self.config.gateway_port} -oStrictHostKeyChecking=accept-new {destination}"
         )
         devices = sorted(
             lease["devices"], key=lambda name: int(NAME_RE.fullmatch(name).group(1))
