@@ -42,7 +42,7 @@ def run_case(browser, url: str, scenario: str, init_script: str, viewport: str) 
         page.locator("#reservation").wait_for(state="visible")
         command = page.locator("#command").inner_text()
         assert command.startswith(
-            "ssh -t rack@chestnut "
+            "ssh rack@chestnut "
         ) and command.endswith(tuple(f"-NUT{i:03d}" for i in range(1, 1000)))
         assert page.locator("#reserve-form").is_hidden()
         assert "loading" not in (

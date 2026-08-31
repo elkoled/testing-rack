@@ -122,7 +122,6 @@ def main():
             subprocess.run(
                 [
                     "ssh",
-                    "-tt",
                     *connection,
                     "-i",
                     args.identity,

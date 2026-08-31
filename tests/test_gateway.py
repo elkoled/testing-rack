@@ -35,6 +35,7 @@ class GatewayTest(unittest.TestCase):
         self.assertEqual(stopped.exception.code, 0)
         self.assertEqual(request.call_count, 1)
         self.assertEqual(run.call_args.args[0][-1], "comma@comma-6f9f27a9")
+        self.assertNotIn("-tt", run.call_args.args[0])
         self.assertRegex(
             stderr.getvalue(), r"^chestnut-rack · NUT001 · (59|60) min remaining\n$"
         )
