@@ -132,6 +132,18 @@ def release(page) -> None:
 
 
 def run_interleavings(browser, url: str) -> None:
+    # A rack can expose more ready devices than one reservation may claim.
+    context = browser.new_context()
+    page = context.new_page()
+    page.goto(url, wait_until="networkidle")
+    page.evaluate("ui.state.max_devices = 3\nrender()")
+    assert page.locator("#count option").count() == 4
+    for name in ("NUT002", "NUT003", "NUT004"):
+        page.locator("#matrix .device", has_text=name).click()
+    assert page.locator("#matrix .selected").count() == 3
+    assert page.locator("#count").input_value() == "3"
+    context.close()
+
     # Same profile, two tabs, simultaneous submit: exactly one lease and both tabs
     # must converge on it through the storage event.
     context = browser.new_context()

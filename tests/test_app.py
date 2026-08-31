@@ -74,6 +74,17 @@ class StoreTest(unittest.TestCase):
         self.assertTrue(result["access_commands"][1].endswith("-NUT002"))
         self.assertTrue(result["access_commands"][2].endswith("-NUT003"))
 
+    def test_display_id_collision_does_not_release_another_lease(self):
+        first = self.reserve(1)
+        second = self.store.reserve("mira", 1, 60, "different-key-123")
+        self.store.state["leases"][1]["display_id"] = self.store.state["leases"][0][
+            "display_id"
+        ]
+
+        self.store.release(first["token"])
+
+        self.assertEqual(self.store.current(second["token"])["devices"], ["NUT002"])
+
     def test_connection_health_blocks_offline_allocation(self):
         health = Path(self.tmp.name) / "health.json"
         health.write_text('{"NUT001":"offline","NUT002":"ready","NUT003":"ready"}')

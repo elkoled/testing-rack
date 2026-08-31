@@ -72,7 +72,7 @@ function setup() {
 }
 function buttonLabel() {
   const n = ui.selected.size
-  setText("reserve", `Reserve ${n} device${n === 1 ? "" : "s"}`)
+  setText("reserve", "Reserve")
   $("reserve").disabled = n === 0
 }
 function readyNames() {
@@ -108,7 +108,7 @@ function card(device) {
   el.onclick = () => {
     if (ui.selected.has(device.name)) {
       ui.selected.delete(device.name)
-    } else {
+    } else if (ui.selected.size < ui.state.max_devices) {
       ui.selected.add(device.name)
     }
     $("count").value = String(ui.selected.size)
@@ -120,17 +120,18 @@ function card(device) {
 function render() {
   if (!ui.reservation) {
     const available = readyNames().length
+    const limit = Math.min(available, ui.state.max_devices)
     const desired = $("count").options.length
       ? Number($("count").value)
-      : Math.min(1, available)
-    if ($("count").options.length !== available + 1)
+      : Math.min(1, limit)
+    if ($("count").options.length !== limit + 1)
       $("count").replaceChildren(
         ...Array.from(
-          { length: available + 1 },
+          { length: limit + 1 },
           (_, index) => new Option(index, index),
         ),
       )
-    $("count").value = String(Math.min(desired, available))
+    $("count").value = String(Math.min(desired, limit))
     selectCount(Number($("count").value), false)
   }
   const ready = ui.state.devices.filter((d) => d.state === "ready").length

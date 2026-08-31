@@ -617,7 +617,9 @@ class StateStore:
             lease = self._find_lease(capability)
             candidate = copy.deepcopy(self.state)
             candidate["leases"] = [
-                x for x in candidate["leases"] if x["display_id"] != lease["display_id"]
+                x
+                for x in candidate["leases"]
+                if x["capability_hash"] != lease["capability_hash"]
             ]
             candidate["idempotency"].pop(lease["idempotency_key"], None)
             self._persist(candidate)
@@ -642,7 +644,7 @@ class StateStore:
             refreshed = next(
                 item
                 for item in candidate["leases"]
-                if item["display_id"] == lease["display_id"]
+                if item["capability_hash"] == lease["capability_hash"]
             )
             refreshed["expires_at"] = self.now() + self.config.idle_timeout_minutes * 60
             self._persist(candidate)
@@ -773,7 +775,7 @@ class Handler(BaseHTTPRequestHandler):
                             "path": "/api/reservations",
                             "headers": {
                                 "Content-Type": "application/json",
-                                "Idempotency-Key": "a unique value for this attempt",
+                                "Idempotency-Key": "reuse one unique value for every retry of the same reservation",
                             },
                             "json": {
                                 "name": "your name",
