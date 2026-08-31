@@ -60,6 +60,7 @@ def main():
                 "tests/test_actions.py",
                 "tests/test_api.py",
                 "tests/test_gateway.py",
+                "tests/test_keys.py",
                 "tests/test_ssh.py",
                 "tests/test_warm.py",
             ],

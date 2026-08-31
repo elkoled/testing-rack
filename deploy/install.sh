@@ -19,7 +19,7 @@ if ! id rack >/dev/null 2>&1
 then
   useradd --system --gid testing-rack --home-dir /var/lib/testing-rack-gateway --create-home --shell /bin/bash rack
 fi
-passwd -d rack >/dev/null
+passwd -l rack >/dev/null
 
 install -d -o root -g root -m 0755 /opt/testing-rack /opt/testing-rack/web
 install -d -o root -g root -m 0755 /etc/testing-rack
@@ -28,7 +28,7 @@ install -d -o rack -g testing-rack -m 0750 /var/lib/testing-rack-gateway
 install -d -o rack -g testing-rack -m 0700 /var/lib/testing-rack-gateway/.ssh
 install -d -o rack -g testing-rack -m 0700 /var/lib/testing-rack-gateway/connections
 
-install -o root -g root -m 0755 "$root/app.py" "$root/gateway.py" "$root/warm.py" "$root/actions.py" /opt/testing-rack/
+install -o root -g root -m 0755 "$root/app.py" "$root/gateway.py" "$root/warm.py" "$root/actions.py" "$root/keys.py" /opt/testing-rack/
 install -o root -g root -m 0644 "$root/web/index.html" "$root/web/app.js" "$root/web/common.css" "$root/web/style.css" /opt/testing-rack/web/
 install -o root -g root -m 0644 "$config" /etc/testing-rack/config.json
 
