@@ -32,6 +32,7 @@ def run_case(browser, url: str, scenario: str, init_script: str, viewport: str) 
     try:
         page.goto(url, wait_until="networkidle")
         assert page.locator("#matrix .device").count() > 0
+        assert page.locator("#rack-name").inner_text() == "chestnut-rack"
         name = f"chrome-{scenario[:8]}-{viewport[:1]}-{uuid.uuid4().hex[:6]}"
         page.locator("#nickname").fill(name)
         page.locator("#count").select_option("1")
@@ -41,7 +42,7 @@ def run_case(browser, url: str, scenario: str, init_script: str, viewport: str) 
         page.locator("#reservation").wait_for(state="visible")
         command = page.locator("#command").inner_text()
         assert command.startswith(
-            "ssh rack@chestnut "
+            "ssh -t rack@chestnut "
         ) and command.endswith(tuple(f"-NUT{i:03d}" for i in range(1, 1000)))
         assert page.locator("#reserve-form").is_hidden()
         assert "loading" not in (

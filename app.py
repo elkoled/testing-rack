@@ -40,6 +40,7 @@ class RackError(Exception):
 
 @dataclass(frozen=True)
 class Config:
+    display_name: str
     gateway_host: str
     gateway_port: int
     default_lease_minutes: int
@@ -61,8 +62,15 @@ class Config:
             "max_devices_per_reservation",
             "devices",
         }
-        if set(raw) != required:
-            raise ValueError(f"config fields must be exactly {sorted(required)}")
+        if not required.issubset(raw) or not set(raw).issubset(
+            required | {"display_name"}
+        ):
+            raise ValueError("config fields are invalid")
+        display_name = raw.get("display_name", "testing-rack")
+        if not isinstance(display_name, str) or not re.fullmatch(
+            r"[a-z0-9][a-z0-9-]{0,31}", display_name
+        ):
+            raise ValueError("display_name is invalid")
         if not isinstance(raw["gateway_host"], str) or not raw["gateway_host"].strip():
             raise ValueError("gateway_host must be a non-empty string")
         if (
@@ -138,6 +146,7 @@ class Config:
         if raw["max_devices_per_reservation"] > len(devices):
             raise ValueError("max_devices_per_reservation exceeds inventory")
         return cls(
+            display_name,
             raw["gateway_host"],
             raw["gateway_port"],
             raw["default_lease_minutes"],
@@ -373,7 +382,8 @@ class StateStore:
                 ],
                 "max_devices": self.config.max_devices_per_reservation,
                 "default_duration": self.config.default_lease_minutes,
-                "gateway_host": self.config.gateway_host,
+            "gateway_host": self.config.gateway_host,
+            "display_name": self.config.display_name,
             }
 
     def device(self, name: str) -> dict[str, Any]:
@@ -502,9 +512,9 @@ class StateStore:
     ) -> dict[str, Any]:
         destination = f"rack@{self.config.gateway_host}"
         prefix = (
-            f"ssh {destination}"
+            f"ssh -t {destination}"
             if self.config.gateway_port == 22
-            else f"ssh -p{self.config.gateway_port} -oStrictHostKeyChecking=accept-new {destination}"
+            else f"ssh -t -p{self.config.gateway_port} -oStrictHostKeyChecking=accept-new {destination}"
         )
         devices = sorted(
             lease["devices"], key=lambda name: int(NAME_RE.fullmatch(name).group(1))
@@ -569,6 +579,7 @@ class StateStore:
                 "serial": device["serial"],
                 "health": self._effective_health(name),
                 "expires_at": lease["expires_at"],
+                "display_name": self.config.display_name,
             }
             for key in ("ftdi_serial", "gpu_power_switch"):
                 if key in device:

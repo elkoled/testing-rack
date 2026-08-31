@@ -121,6 +121,8 @@ function render() {
 async function load() {
   try {
     ui.state = await api("/api/state")
+    setText("rack-name", ui.state.display_name)
+    document.title = ui.state.display_name
     $("offline").hidden = true
     setup()
     render()

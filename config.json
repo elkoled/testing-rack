@@ -1,4 +1,5 @@
 {
+  "display_name": "chestnut-rack",
   "gateway_host": "chestnut",
   "gateway_port": 22,
   "default_lease_minutes": 60,

@@ -67,7 +67,10 @@ def main():
     if target["health"] != "ready":
         print(f"Warning: {device} is {target['health']}.", file=sys.stderr)
     minutes = max(0, math.ceil((target["expires_at"] - time.time()) / 60))
-    print(f"testing-rack · {device} · {minutes} min remaining", file=sys.stderr)
+    print(
+        f"{target.get('display_name', 'testing-rack')} · {device} · {minutes} min remaining",
+        file=sys.stderr,
+    )
     if action:
         raise SystemExit(
             subprocess.run(
