@@ -150,7 +150,7 @@ def main():
             [
                 "ssh",
                 *connection,
-                "-tt",
+                "-T",
                 "-i",
                 args.identity,
                 "-o",

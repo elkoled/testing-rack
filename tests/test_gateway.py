@@ -79,7 +79,8 @@ class GatewayTest(unittest.TestCase):
         self.assertEqual(stopped.exception.code, 0)
         self.assertEqual(request.call_count, 1)
         self.assertEqual(run.call_args.args[0][-1], "comma@comma-6f9f27a9")
-        self.assertIn("-tt", run.call_args.args[0])
+        self.assertIn("-T", run.call_args.args[0])
+        self.assertNotIn("-tt", run.call_args.args[0])
         self.assertEqual(stderr.getvalue(), "chestnut_rack · NUT001\n")
 
     def test_hardware_action_is_scoped_and_delegated(self):
@@ -137,7 +138,8 @@ class GatewayTest(unittest.TestCase):
             gateway.main()
         self.assertEqual(stopped.exception.code, 7)
         self.assertEqual(run.call_args.args[0][-2:], ["comma@comma-6f9f27a9", command])
-        self.assertIn("-tt", run.call_args.args[0])
+        self.assertIn("-T", run.call_args.args[0])
+        self.assertNotIn("-tt", run.call_args.args[0])
         self.assertNotIn("shell", run.call_args.kwargs)
 
 if __name__ == "__main__":

@@ -4,3 +4,6 @@
 html.loading body{visibility:hidden}
 .device.offline{filter:grayscale(1);opacity:.45}
 #agent-help{margin:6px 0 0;color:var(--muted);font:13px monospace}
+#availability{font:18px monospace;letter-spacing:.5px}
+#availability b{font-size:26px}.reserved-count{color:#edce75}.free-count{color:#56e26b}
+@media(max-width:520px){#availability{display:block;margin-top:10px}}

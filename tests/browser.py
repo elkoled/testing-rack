@@ -69,7 +69,9 @@ def run_case(browser, url: str, scenario: str, init_script: str, viewport: str) 
         )
         assert page.locator("#copy-ssh").inner_text() == "Copy SSH"
         availability = page.locator("#availability").inner_text()
-        assert "reserved ·" in availability and availability.endswith(" free")
+        assert "RESERVED ·" in availability and availability.endswith(" FREE")
+        assert page.locator("#availability .reserved-count").count() == 1
+        assert page.locator("#availability .free-count").count() == 1
         assert page.evaluate(
             """() => {
               dispatchEvent(new Event('beforeunload'))

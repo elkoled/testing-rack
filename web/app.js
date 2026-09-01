@@ -119,12 +119,15 @@ function render() {
   const reserved = ui.state.devices.filter(
     (d) => d.state === "reserved" && d.health !== "offline",
   ).length
-  const parts = [`${reserved} reserved`, `${ready} free`]
-  if (offline) parts.push(`${offline} offline`)
-  setText(
-    "availability",
-    parts.join(" · "),
-  )
+  const reservedCount = document.createElement("b")
+  const freeCount = document.createElement("b")
+  reservedCount.className = "reserved-count"
+  freeCount.className = "free-count"
+  reservedCount.textContent = reserved
+  freeCount.textContent = ready
+  const status = [reservedCount, " RESERVED · ", freeCount, " FREE"]
+  if (offline) status.push(` · ${offline} OFFLINE`)
+  $("availability").replaceChildren(...status)
   $("matrix").replaceChildren(...ui.state.devices.map(card))
 }
 async function load() {
