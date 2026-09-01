@@ -29,7 +29,7 @@ install -d -o rack -g testing-rack -m 0700 /var/lib/testing-rack-gateway/connect
 
 install -o root -g root -m 0755 "$root/app.py" "$root/gateway.py" "$root/warm.py" "$root/actions.py" /opt/testing-rack/
 rm -f /opt/testing-rack/keys.py
-install -o root -g root -m 0644 "$root/web/index.html" "$root/web/app.js" "$root/web/common.css" "$root/web/style.css" /opt/testing-rack/web/
+install -o root -g root -m 0644 "$root/web/index.html" "$root/web/app.js" "$root/web/common.css" "$root/web/style.css" "$root/web/openapi.json" /opt/testing-rack/web/
 install -o root -g root -m 0644 "$config" /etc/testing-rack/config.json
 
 if [[ -n "$device_key" ]]

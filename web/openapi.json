@@ -1,0 +1,142 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "testing-rack API",
+    "version": "1.0.0",
+    "description": "Reserve exclusive test devices and obtain SSH access commands. Use /api/agent for concise workflow guidance."
+  },
+  "servers": [{"url": "/"}],
+  "paths": {
+    "/api/state": {
+      "get": {
+        "operationId": "getRackState",
+        "summary": "List device availability and reservation limits",
+        "responses": {
+          "200": {"description": "Current public rack state", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/RackState"}}}}
+        }
+      }
+    },
+    "/api/agent": {
+      "get": {
+        "operationId": "getAgentInstructions",
+        "summary": "Get concise instructions for agents",
+        "responses": {
+          "200": {"description": "Machine-readable reservation and SSH workflow", "content": {"application/json": {"schema": {"type": "object"}}}}
+        }
+      }
+    },
+    "/api/reservations": {
+      "post": {
+        "operationId": "createReservation",
+        "summary": "Reserve one or more devices",
+        "description": "Repeat a request with the same Idempotency-Key after an uncertain response. Reusing the key with different inputs is rejected.",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "description": "A unique 16-128 character identifier. Reuse it only when retrying the same reservation.",
+            "schema": {"type": "string", "pattern": "^[A-Za-z0-9_-]{16,128}$"}
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {"$ref": "#/components/schemas/AutomaticReservationRequest"},
+                  {"$ref": "#/components/schemas/ExactReservationRequest"}
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Reservation created. Save token and invoke an access_commands entry. Append a quoted remote command for agent use; Standard input is streamed.",
+            "content": {"application/json": {"schema": {"$ref": "#/components/schemas/Reservation"}}}
+          },
+          "400": {"$ref": "#/components/responses/Error"},
+          "409": {"$ref": "#/components/responses/Error"}
+        }
+      }
+    },
+    "/api/reservation": {
+      "get": {
+        "operationId": "getReservation",
+        "summary": "Read the reservation authorized by a capability token",
+        "security": [{"bearerAuth": []}],
+        "responses": {
+          "200": {"description": "Current reservation", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/Reservation"}}}},
+          "403": {"$ref": "#/components/responses/Error"}
+        }
+      },
+      "delete": {
+        "operationId": "releaseReservation",
+        "summary": "Release all devices in the authorized reservation",
+        "security": [{"bearerAuth": []}],
+        "responses": {
+          "200": {"description": "Released devices", "content": {"application/json": {"schema": {"type": "object", "required": ["released"], "properties": {"released": {"type": "array", "items": {"$ref": "#/components/schemas/DeviceName"}}}}}}},
+          "403": {"$ref": "#/components/responses/Error"}
+        }
+      }
+    },
+    "/healthz": {
+      "get": {
+        "operationId": "getHealth",
+        "summary": "Check service health",
+        "responses": {
+          "200": {"description": "Service is healthy", "content": {"application/json": {"schema": {"type": "object", "required": ["status"], "properties": {"status": {"const": "ok"}}}}}}
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {"type": "http", "scheme": "bearer", "description": "Capability token returned when the reservation is created."}
+    },
+    "responses": {
+      "Error": {"description": "Request rejected", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/Error"}}}}
+    },
+    "schemas": {
+      "DeviceName": {"type": "string", "pattern": "^NUT[0-9]+$", "examples": ["NUT001"]},
+      "AutomaticReservationRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "count"],
+        "properties": {"name": {"type": "string", "description": "Human-readable cooperative owner identity."}, "count": {"type": "integer", "minimum": 1}}
+      },
+      "ExactReservationRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "devices"],
+        "properties": {"name": {"type": "string", "description": "Human-readable cooperative owner identity."}, "devices": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/components/schemas/DeviceName"}}}
+      },
+      "Reservation": {
+        "type": "object",
+        "required": ["token", "display_id", "name", "devices", "expires_at", "access_commands", "actions"],
+        "properties": {
+          "token": {"type": "string", "description": "Secret capability token; do not expose it."},
+          "display_id": {"type": "string"},
+          "name": {"type": "string"},
+          "devices": {"type": "array", "items": {"$ref": "#/components/schemas/DeviceName"}},
+          "expires_at": {"type": "number", "description": "Unix timestamp. Active SSH sessions refresh the idle deadline."},
+          "access_commands": {"type": "array", "description": "Complete SSH commands. Run directly for an interactive terminal or append a quoted remote command for non-TTY agent use.", "items": {"type": "string"}},
+          "actions": {"type": "object", "additionalProperties": {"type": "array", "items": {"type": "string", "enum": ["gpu_power:on", "gpu_power:off", "ftdi:reset"]}}}
+        }
+      },
+      "RackState": {
+        "type": "object",
+        "required": ["devices", "max_devices", "idle_timeout_minutes", "display_name"],
+        "properties": {
+          "devices": {"type": "array", "items": {"type": "object", "required": ["name", "health", "state", "owner"], "properties": {"name": {"$ref": "#/components/schemas/DeviceName"}, "health": {"type": "string", "enum": ["ready", "offline", "unknown"]}, "state": {"type": "string", "enum": ["ready", "offline", "unknown", "reserved"]}, "owner": {"type": ["string", "null"]}}}},
+          "max_devices": {"type": "integer", "minimum": 1},
+          "idle_timeout_minutes": {"type": "integer", "minimum": 1},
+          "display_name": {"type": "string"}
+        }
+      },
+      "Error": {"type": "object", "required": ["error", "message"], "properties": {"error": {"type": "string"}, "message": {"type": "string"}}, "additionalProperties": true}
+    }
+  }
+}

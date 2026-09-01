@@ -146,11 +146,17 @@ def main():
     )
     heartbeat.start()
     try:
+        # A selector by itself is an interactive login, even though the selector is
+        # represented as a command on the gateway SSH hop. Force a PTY on the
+        # device hop so the remote shell has normal prompts, colors, line editing,
+        # and terminal-sized output. Command-bearing sessions stay non-TTY for
+        # predictable agent/pipeline behavior. In both cases stdin is inherited.
+        terminal_mode = "-tt" if remote_command is None else "-T"
         result = forward(
             [
                 "ssh",
                 *connection,
-                "-T",
+                terminal_mode,
                 "-i",
                 args.identity,
                 "-o",

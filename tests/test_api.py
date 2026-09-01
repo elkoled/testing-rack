@@ -95,6 +95,7 @@ class HttpApiTest(unittest.TestCase):
     def test_security_headers_and_public_state(self):
         status, headers, body = self.request("GET", "/api/state")
         self.assertEqual(status, 200)
+        self.assertEqual(headers["Link"], '</openapi.json>; rel="service-desc"')
         self.assertEqual(
             len(json.loads(body)["devices"]),
             len(json.loads((ROOT / "config.json").read_text())["devices"]),
@@ -112,6 +113,7 @@ class HttpApiTest(unittest.TestCase):
         status, _, body = self.request("GET", "/api/agent")
         self.assertEqual(status, 200)
         instructions = json.loads(body)
+        self.assertEqual(instructions["openapi"], "/openapi.json")
         self.assertEqual(instructions["reserve"]["method"], "POST")
         self.assertEqual(instructions["reserve"]["json"]["count"], 1)
         self.assertEqual(
@@ -126,6 +128,36 @@ class HttpApiTest(unittest.TestCase):
         self.assertNotIn("serial", text)
         self.assertNotIn("ftdi", text.lower())
         self.assertNotIn("gpu_power_switch", text)
+
+    def test_openapi_describes_public_api_contract(self):
+        status, headers, body = self.request("GET", "/openapi.json")
+        self.assertEqual(status, 200)
+        self.assertEqual(
+            headers["Content-Type"], "application/json; charset=utf-8"
+        )
+        document = json.loads(body)
+        self.assertEqual(document["openapi"], "3.1.0")
+        self.assertEqual(
+            set(document["paths"]),
+            {
+                "/api/state",
+                "/api/agent",
+                "/api/reservations",
+                "/api/reservation",
+                "/healthz",
+            },
+        )
+        reserve = document["paths"]["/api/reservations"]["post"]
+        parameters = {item["name"]: item for item in reserve["parameters"]}
+        self.assertTrue(parameters["Idempotency-Key"]["required"])
+        self.assertEqual(
+            document["paths"]["/api/reservation"]["get"]["security"],
+            [{"bearerAuth": []}],
+        )
+        self.assertIn(
+            "Standard input is streamed",
+            reserve["responses"]["201"]["description"],
+        )
 
     def test_unsupported_methods_are_consistent_json(self):
         for method in ("PUT", "PATCH", "OPTIONS", "TRACE"):

@@ -54,7 +54,7 @@ class GatewayTest(unittest.TestCase):
         close.assert_called_once_with(*control)
         process.terminate.assert_called_once_with()
 
-    def test_final_target_uses_comma_serial(self):
+    def test_interactive_session_uses_pty_and_comma_serial(self):
         target = {
             "name": "NUT001",
             "serial": "6f9f27a9",
@@ -79,8 +79,8 @@ class GatewayTest(unittest.TestCase):
         self.assertEqual(stopped.exception.code, 0)
         self.assertEqual(request.call_count, 1)
         self.assertEqual(run.call_args.args[0][-1], "comma@comma-6f9f27a9")
-        self.assertIn("-T", run.call_args.args[0])
-        self.assertNotIn("-tt", run.call_args.args[0])
+        self.assertIn("-tt", run.call_args.args[0])
+        self.assertNotIn("-T", run.call_args.args[0])
         self.assertEqual(stderr.getvalue(), "chestnut_rack · NUT001\n")
 
     def test_hardware_action_is_scoped_and_delegated(self):

@@ -648,6 +648,7 @@ class Handler(BaseHTTPRequestHandler):
         self.send_response(status)
         self.send_header("Content-Type", content_type)
         self.send_header("Content-Length", str(length))
+        self.send_header("Link", '</openapi.json>; rel="service-desc"')
         self.send_header("Cache-Control", "no-store")
         self.send_header("X-Content-Type-Options", "nosniff")
         self.send_header("X-Frame-Options", "DENY")
@@ -710,6 +711,7 @@ class Handler(BaseHTTPRequestHandler):
                     200,
                     {
                         "purpose": "Reserve exclusive test-device access.",
+                        "openapi": "/openapi.json",
                         "reserve": {
                             "method": "POST",
                             "path": "/api/reservations",
@@ -743,6 +745,8 @@ class Handler(BaseHTTPRequestHandler):
                         },
                     },
                 )
+            elif path == "/openapi.json":
+                self._file("openapi.json", "application/json; charset=utf-8")
             elif path == "/api/reservation":
                 self._json(200, self.store.current(self._token()))
             elif path == "/healthz":
