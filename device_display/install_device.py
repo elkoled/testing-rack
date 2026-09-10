@@ -61,6 +61,9 @@ def main():
     if target.exists() and not (dest / 'previous-dropin.conf').exists():
       shutil.copyfile(target, dest / 'previous-dropin.conf')
     shutil.copyfile(source / 'magic-rack-display.conf', target)
+    calibration = Path('/etc/systemd/system/screen_calibration.service.d')
+    calibration.mkdir(exist_ok=True)
+    shutil.copyfile(source / 'screen-calibration-panel.conf', calibration / '90-panel-type.conf')
     subprocess.run(['sync'], check=True)
   finally:
     if read_only:

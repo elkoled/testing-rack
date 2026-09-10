@@ -19,6 +19,11 @@ The idle screen uses a neutral black background and the stock AGNOS idle
 brightness (65%, or 165/255 on this rack). It does not apply gamma or contrast
 overrides. Openpilot retains control while its display client is connected.
 
+The installer also adds a panel-type condition to AGNOS's `screen_calibration`
+service. Its DWO register calibration must not run on the MICI Bantian panel.
+The condition uses the live device-tree panel node; original calibration files
+are preserved, and other panel types retain the stock service behavior.
+
 The device bundle lives in `/data/rack-display/` and uses AGNOS's Python/raylib
 plus a bundled font and the Chestnut icons. There is no openpilot checkout or Python-path dependency.
 While idle, USB status is sampled every two seconds and reservations every

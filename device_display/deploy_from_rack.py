@@ -18,7 +18,7 @@ for config in json.loads((root / 'inventory.json').read_text()):
          '-o', 'StrictHostKeyChecking=no', 'comma@comma-' + config['serial']]
   buf = io.BytesIO()
   with tarfile.open(fileobj=buf, mode='w') as tar:
-    for name in ('launch.py', 'idle.py', 'install_device.py', 'magic-rack-display.conf'):
+    for name in ('launch.py', 'idle.py', 'install_device.py', 'magic-rack-display.conf', 'screen-calibration-panel.conf'):
       tar.add(root / name, arcname=name)
     for color in ('green', 'orange'):
       name = f'chestnut_{color}.png'
