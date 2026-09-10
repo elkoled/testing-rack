@@ -131,7 +131,11 @@ class IdleBackground:
       rl.clear_background(rl.Color(10, 15, 22, 255))
       text(self.config['name'], .03, .24, accent)
       text(f"{self.config['row'].upper()} ROW / POSITION {self.config['position']}", .29, .10, rl.WHITE)
-      text(reservation, .44, .12, rl.WHITE)
+      # Match testing-rack's .device.ready span and .device.reserved span colors.
+      reservation_color = (rl.Color(86, 226, 107, 255) if reservation == 'Available' else
+                           rl.Color(237, 206, 117, 255) if reservation.startswith('Reserved: ') else
+                           rl.Color(150, 150, 150, 255))
+      text(reservation, .44, .12, reservation_color)
       text(self.config['serial'], .60, .09, rl.WHITE)
       text(f"{self.config['strip'].capitalize()} strip / outlet {self.config['outlet']}", .72, .075, accent)
       text(gpu[0], .85, .10, colors[gpu[1]])
