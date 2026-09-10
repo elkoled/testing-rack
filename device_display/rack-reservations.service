@@ -1,0 +1,22 @@
+[Unit]
+Description=Read-only rack reservation display cache
+After=network.target testing-rack.service
+
+[Service]
+User=testing-rack
+ExecStart=/usr/bin/python3 /opt/rack-display/reservations.py
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+MemoryMax=64M
+CPUQuota=5%
+Nice=19
+TasksMax=8
+LogRateLimitIntervalSec=60
+LogRateLimitBurst=5
+
+[Install]
+WantedBy=multi-user.target

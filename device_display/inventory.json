@@ -1,0 +1,12 @@
+[
+  {"name":"NUT001","serial":"557d5c3a","row":"top","position":1,"strip":"lower","outlet":1},
+  {"name":"NUT002","serial":"d292bc85","row":"top","position":2,"strip":"lower","outlet":2},
+  {"name":"NUT003","serial":"528f306f","row":"top","position":3,"strip":"lower","outlet":3},
+  {"name":"NUT004","serial":"4117bfee","row":"top","position":4,"strip":"lower","outlet":4},
+  {"name":"NUT005","serial":"d05bb90f","row":"top","position":5,"strip":"lower","outlet":5},
+  {"name":"NUT006","serial":"178e6b20","row":"bottom","position":1,"strip":"upper","outlet":1},
+  {"name":"NUT007","serial":"96035a74","row":"bottom","position":2,"strip":"upper","outlet":3},
+  {"name":"NUT008","serial":"ba3f5545","row":"bottom","position":3,"strip":"upper","outlet":2},
+  {"name":"NUT009","serial":"de2e7866","row":"bottom","position":4,"strip":"upper","outlet":4},
+  {"name":"NUT010","serial":"95940f7f","row":"bottom","position":5,"strip":"upper","outlet":5}
+]
