@@ -137,8 +137,9 @@ class IdleBackground:
       text(gpu[0], .85, .10, colors[gpu[1]])
       if gpu[1] in self.icons:
         icon = self.icons[gpu[1]]
-        scale = height * .12 / icon.height
-        rl.draw_texture_ex(icon, rl.Vector2(width - icon.width * scale - width * .025, height * .84),
+        # Match the home screen: green 54x40, orange 68x40, preserving aspect ratio.
+        scale = 40 / icon.height
+        rl.draw_texture_ex(icon, rl.Vector2(width - icon.width * scale - 16, height - 40 - 12),
                            0, scale, rl.WHITE)
     finally:
       rl.end_drawing()
