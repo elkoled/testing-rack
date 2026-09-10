@@ -113,7 +113,6 @@ class IdleBackground:
           raise RuntimeError(f'{color} GPU icon did not load')
         self.icons[color] = icon
     width, height = rl.get_screen_width(), rl.get_screen_height()
-    accent = rl.Color(90, 185, 255, 255) if self.config['row'] == 'top' else rl.Color(255, 185, 75, 255)
     colors = {'green': rl.Color(70, 220, 120, 255), 'orange': rl.Color(255, 170, 50, 255),
               'gray': rl.Color(150, 150, 150, 255)}
 
@@ -129,7 +128,7 @@ class IdleBackground:
     rl.begin_drawing()
     try:
       rl.clear_background(rl.Color(10, 15, 22, 255))
-      text(self.config['name'], .03, .24, accent)
+      text(self.config['name'], .03, .24, rl.WHITE)
       text(f"{self.config['row'].upper()} ROW / POSITION {self.config['position']}", .29, .10, rl.WHITE)
       # Match testing-rack's .device.ready span and .device.reserved span colors.
       reservation_color = (rl.Color(86, 226, 107, 255) if reservation == 'Available' else
@@ -137,7 +136,7 @@ class IdleBackground:
                            rl.Color(150, 150, 150, 255))
       text(reservation, .44, .12, reservation_color)
       text(self.config['serial'], .60, .09, rl.WHITE)
-      text(f"{self.config['strip'].capitalize()} strip / outlet {self.config['outlet']}", .72, .075, accent)
+      text(f"{self.config['strip'].capitalize()} strip / outlet {self.config['outlet']}", .72, .075, rl.WHITE)
       text(gpu[0], .85, .10, colors[gpu[1]])
       if gpu[1] in self.icons:
         icon = self.icons[gpu[1]]
