@@ -5,11 +5,27 @@ import tempfile
 import types
 import unittest
 
-from idle import gpu_state, reservation_text
+from idle import IdleBackground, gpu_state, reservation_text
 from launch import integrate
 
 
 class DisplayTests(unittest.TestCase):
+  def test_screen_wakes_after_idle_frame_only(self):
+    background = IdleBackground.__new__(IdleBackground)
+    background.failed = False
+    background.next_check = 0
+    events = []
+    def draw(now):
+      events.append('frame')
+      return True
+    background._draw = draw
+    background.draw(None, None, None, lambda: events.append('power'))
+    self.assertEqual(events, ['frame', 'power'])
+    background.next_check = 0
+    background._draw = lambda now: None
+    background.draw(None, None, None, lambda: events.append('power'))
+    self.assertEqual(events, ['frame', 'power'])
+
   def test_reservation_expiry_and_no_false_availability(self):
     self.assertEqual(reservation_text(None, 's', 100), 'Reservation unknown')
     self.assertEqual(reservation_text((0, {'s': {'owner': None}}), 's', 46), 'Reservation unknown')
@@ -73,7 +89,8 @@ class DisplayTests(unittest.TestCase):
     idle = types.SimpleNamespace(set_idle=lambda idle: events.append(('idle', idle)),
                                  draw=lambda *args: events.append('draw'))
     env = dict(clients=set(), server=Server(), socket=socket, threading=types.SimpleNamespace(Thread=Thread),
-               idle_background=idle, tex=None, pos=None, show_background=None, handle_client=None, drm_master=1)
+               idle_background=idle, tex=None, pos=None, show_background=None, power_screen=None,
+               handle_client=None, drm_master=1)
     with self.assertRaises(End):
       exec(code, env)
     accepted = events.index('accepted')

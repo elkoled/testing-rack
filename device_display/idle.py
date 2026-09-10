@@ -78,7 +78,7 @@ class IdleBackground:
       self.idle.clear()
     self.was_idle = idle
 
-  def draw(self, original_texture, original_position, fallback):
+  def draw(self, original_texture, original_position, fallback, power_screen):
     if self.failed:
       if self.last != 'fallback':
         fallback(original_texture, original_position)
@@ -89,7 +89,10 @@ class IdleBackground:
       return
     self.next_check = now + 2
     try:
-      self._draw(now)
+      if self._draw(now):
+        # Preserve the stock background's screen wake after rendering, including
+        # when the last client left the panel asleep. The broker gates this on idle.
+        power_screen()
     except Exception as exc:
       print(f'Rack background disabled: {exc}', flush=True)
       self.failed = True
@@ -148,3 +151,4 @@ class IdleBackground:
       rl.end_drawing()
     self.last = state
     print(f"RACK_IDLE {self.config['name']} {gpu[0]} {reservation}", flush=True)
+    return True

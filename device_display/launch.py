@@ -28,7 +28,7 @@ def integrate(source):
       client, _ = server.accept()
     except socket.timeout:
       if not clients:
-        idle_background.draw(tex, pos, show_background)
+        idle_background.draw(tex, pos, show_background, power_screen)
       continue
     except Exception:
       continue

@@ -3,16 +3,17 @@
 The screen is the AGNOS display broker's background, not another display client.
 It shows the position-based NUT name, physical row/position, reservation owner,
 comma serial, power outlet, and GPU link speed with green/orange Chestnut icons
-(gray disconnected text when absent). The physical
-mapping is in `inventory.json`; never infer it from the reservation service's
-NUT numbering.
+(gray disconnected text when absent). The physical mapping is in `inventory.json`;
+hardware serials are the stable identity used to match reservations.
 
 `launch.py` reads the installed `/usr/comma/magic.py` and applies a hash-checked,
 in-memory adjustment to its idle loop. The installed AGNOS file is untouched.
 The broker accepts clients before attempting an idle redraw and performs no
 rack drawing while a client is connected. Descriptor handoff and updater
-handling remain the installed AGNOS implementation. No openpilot processes,
-setup flags, launch scripts, power settings, or device firmware are changed.
+handling remain the installed AGNOS implementation. After rendering an idle frame,
+the broker calls AGNOS's existing `power_screen()` just as its stock background
+does, so a departing client's sleeping screen can wake. No openpilot processes,
+setup flags, launch scripts, or device firmware are changed.
 
 The device bundle lives in `/data/rack-display/` and uses AGNOS's Python/raylib
 plus a bundled font and the Chestnut icons. There is no openpilot checkout or Python-path dependency.
