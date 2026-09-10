@@ -5,15 +5,77 @@
   "idle_timeout_minutes": 30,
   "max_devices_per_reservation": 10,
   "devices": [
-    {"name":"NUT001","device_type":"four","serial":"178e6b20","ftdi_serial":"DK0CFV87","gpu_power_switch":"upper_1"},
-    {"name":"NUT002","device_type":"four","serial":"ba3f5545","ftdi_serial":"DK0CGFB6","gpu_power_switch":"upper_2"},
-    {"name":"NUT003","device_type":"four","serial":"de2e7866","ftdi_serial":"DK0CGTCH","gpu_power_switch":"upper_4"},
-    {"name":"NUT004","device_type":"four","serial":"d05bb90f","ftdi_serial":"DK0CFZ4T","gpu_power_switch":"lower_5"},
-    {"name":"NUT005","device_type":"four","serial":"528f306f","ftdi_serial":"DK0CFPB6","gpu_power_switch":"lower_3"},
-    {"name":"NUT006","device_type":"four","serial":"4117bfee","ftdi_serial":"DK0CFVLA","gpu_power_switch":"lower_4"},
-    {"name":"NUT007","device_type":"four","serial":"96035a74","ftdi_serial":"DK0CFPQE","gpu_power_switch":"upper_3"},
-    {"name":"NUT008","device_type":"four","serial":"95940f7f","ftdi_serial":"DK0CFUGS","gpu_power_switch":"upper_5"},
-    {"name":"NUT009","device_type":"four","serial":"d292bc85","ftdi_serial":"DK0CG2LJ","gpu_power_switch":"lower_2"},
-    {"name":"NUT010","device_type":"four","serial":"557d5c3a","ftdi_serial":"DK0CFVDW","gpu_power_switch":"lower_1"}
+    {
+      "name": "NUT001",
+      "device_type": "four",
+      "serial": "557d5c3a",
+      "ftdi_serial": "DK0CFVDW",
+      "gpu_power_switch": "lower_1"
+    },
+    {
+      "name": "NUT002",
+      "device_type": "four",
+      "serial": "d292bc85",
+      "ftdi_serial": "DK0CG2LJ",
+      "gpu_power_switch": "lower_2"
+    },
+    {
+      "name": "NUT003",
+      "device_type": "four",
+      "serial": "528f306f",
+      "ftdi_serial": "DK0CFPB6",
+      "gpu_power_switch": "lower_3"
+    },
+    {
+      "name": "NUT004",
+      "device_type": "four",
+      "serial": "4117bfee",
+      "ftdi_serial": "DK0CFVLA",
+      "gpu_power_switch": "lower_4"
+    },
+    {
+      "name": "NUT005",
+      "device_type": "four",
+      "serial": "d05bb90f",
+      "ftdi_serial": "DK0CFZ4T",
+      "gpu_power_switch": "lower_5"
+    },
+    {
+      "name": "NUT006",
+      "device_type": "four",
+      "serial": "178e6b20",
+      "ftdi_serial": "DK0CFV87",
+      "gpu_power_switch": "upper_1"
+    },
+    {
+      "name": "NUT007",
+      "device_type": "four",
+      "serial": "96035a74",
+      "ftdi_serial": "DK0CFPQE",
+      "gpu_power_switch": "upper_3"
+    },
+    {
+      "name": "NUT008",
+      "device_type": "four",
+      "serial": "ba3f5545",
+      "ftdi_serial": "DK0CGFB6",
+      "gpu_power_switch": "upper_2"
+    },
+    {
+      "name": "NUT009",
+      "device_type": "four",
+      "serial": "de2e7866",
+      "reserved_by": "Jenkins Compile",
+      "ftdi_serial": "DK0CGTCH",
+      "gpu_power_switch": "upper_4"
+    },
+    {
+      "name": "NUT010",
+      "device_type": "four",
+      "serial": "95940f7f",
+      "reserved_by": "Jenkins stresstest",
+      "ftdi_serial": "DK0CFUGS",
+      "gpu_power_switch": "upper_5"
+    }
   ]
 }

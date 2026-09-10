@@ -5,7 +5,7 @@ It shows the position-based NUT name, physical row/position, reservation owner,
 comma serial, power outlet, and GPU link speed with green/orange Chestnut icons
 (gray disconnected text when absent). The physical
 mapping is in `inventory.json`; never infer it from the reservation service's
-older NUT numbering.
+NUT numbering.
 
 `launch.py` reads the installed `/usr/comma/magic.py` and applies a hash-checked,
 in-memory adjustment to its idle loop. The installed AGNOS file is untouched.
@@ -46,8 +46,10 @@ screen. Do not restart magic under an active client to force initial activation.
 If no client or manager is present, the installer checks again before restarting
 magic. It does not stop tests or reboot anything.
 
-Reservations are associated by serial. Existing gateway/service names are not
-renamed because that would affect current reservations and connections.
+Reservations are associated by serial. The repository and deployed rack inventory
+use the same physical-position numbering as the screens: NUT001–NUT005 on top,
+NUT006–NUT010 on the bottom. Fixed Jenkins assignments remain attached to their
+serials at bottom positions 4 and 5.
 
 ## Failure behavior and rollback
 
