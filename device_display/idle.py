@@ -130,7 +130,7 @@ class IdleBackground:
 
     rl.begin_drawing()
     try:
-      rl.clear_background(rl.Color(10, 15, 22, 255))
+      rl.clear_background(rl.BLACK)
       text(self.config['name'], .03, .24, rl.WHITE)
       text(f"{self.config['row'].upper()} ROW / POSITION {self.config['position']}", .29, .10, rl.WHITE)
       # Match testing-rack's .device.ready span and .device.reserved span colors.

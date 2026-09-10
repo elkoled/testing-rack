@@ -15,6 +15,10 @@ the broker calls AGNOS's existing `power_screen()` just as its stock background
 does, so a departing client's sleeping screen can wake. No openpilot processes,
 setup flags, launch scripts, or device firmware are changed.
 
+The idle screen uses a neutral black background and the stock AGNOS idle
+brightness (65%, or 165/255 on this rack). It does not apply gamma or contrast
+overrides. Openpilot retains control while its display client is connected.
+
 The device bundle lives in `/data/rack-display/` and uses AGNOS's Python/raylib
 plus a bundled font and the Chestnut icons. There is no openpilot checkout or Python-path dependency.
 While idle, USB status is sampled every two seconds and reservations every
