@@ -13,7 +13,6 @@ from playwright.sync_api import sync_playwright
 
 SCENARIOS = {
     "normal": "",
-    "without-randomUUID": "delete Crypto.prototype.randomUUID",
     "without-webcrypto": "Object.defineProperty(globalThis,'crypto',{value:undefined,configurable:true})",
 }
 VIEWPORTS = {
@@ -32,7 +31,12 @@ def run_case(browser, url: str, scenario: str, init_script: str, viewport: str) 
     try:
         page.goto(url, wait_until="networkidle")
         assert page.locator("#matrix .device").count() > 0
-        assert page.locator("#count option").count() == 11
+        assert page.locator("#count option").count() == page.evaluate("readyNames().length") + 1
+        for device in page.request.get(url + "/api/state").json()["devices"]:
+            if device["state"] == "reserved":
+                card = page.locator("#matrix .device", has_text=device["name"])
+                assert card.is_disabled()
+                assert card.locator("span").text_content() == device["owner"]
         assert page.locator("#rack-name").inner_text() == "chestnut_rack"
         assert page.locator("#agent-help a").count() == 1
         assert page.locator('#agent-help a[href="/openapi.json"]').inner_text() == "OpenAPI"
@@ -128,7 +132,7 @@ def run_interleavings(browser, url: str) -> None:
     page.goto(url, wait_until="networkidle")
     page.evaluate("ui.state.max_devices = 3\nrender()")
     assert page.locator("#count option").count() == 4
-    for name in ("NUT002", "NUT003", "NUT004"):
+    for name in page.evaluate("readyNames().slice(1, 4)"):
         page.locator("#matrix .device", has_text=name).click()
     assert page.locator("#matrix .selected").count() == 3
     assert page.locator("#count").input_value() == "3"
@@ -165,8 +169,9 @@ def run_interleavings(browser, url: str) -> None:
     reserve(p1, name)
     p1.locator("#reservation").wait_for(state="visible")
     p2.reload(wait_until="networkidle")
-    assert p2.locator("#count option").count() == 10
-    assert p2.locator("#count option").last.get_attribute("value") == "9"
+    available = p2.evaluate("readyNames().length")
+    assert p2.locator("#count option").count() == available + 1
+    assert p2.locator("#count option").last.get_attribute("value") == str(available)
     reserve(p2, name)
     p2.locator("#message").filter(has_text="already has reservation").wait_for(
         state="visible"

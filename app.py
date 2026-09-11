@@ -632,7 +632,6 @@ def _atomic_create(path: Path, data: bytes, mode: int) -> None:
 class Handler(BaseHTTPRequestHandler):
     store: StateStore
     static_dir: Path
-    common_static_dir: Path
     server_version = "testing-rack/0.1"
 
     def log_message(self, fmt: str, *args: Any) -> None:
@@ -717,15 +716,9 @@ class Handler(BaseHTTPRequestHandler):
             elif path in ("/", "/index.html"):
                 self._file("index.html", "text/html; charset=utf-8")
             elif path == "/app.js":
-                self._file(
-                    "app.js", "text/javascript; charset=utf-8", self.common_static_dir
-                )
+                self._file("app.js", "text/javascript; charset=utf-8")
             elif path == "/style.css":
                 self._file("style.css", "text/css; charset=utf-8")
-            elif path == "/common.css":
-                self._file(
-                    "common.css", "text/css; charset=utf-8", self.common_static_dir
-                )
             elif path == "/favicon.ico":
                 self._headers(204, "image/x-icon", 0)
             else:
@@ -807,10 +800,8 @@ class Handler(BaseHTTPRequestHandler):
     def do_TRACE(self) -> None:
         self._method_not_allowed()
 
-    def _file(
-        self, name: str, content_type: str, directory: Path | None = None
-    ) -> None:
-        data = ((directory or self.static_dir) / name).read_bytes()
+    def _file(self, name: str, content_type: str) -> None:
+        data = (self.static_dir / name).read_bytes()
         self._headers(200, content_type, len(data))
         self.wfile.write(data)
 
@@ -837,7 +828,7 @@ def main() -> None:
     handler = type(
         "TestingRackHandler",
         (Handler,),
-        {"store": store, "static_dir": static_dir, "common_static_dir": static_dir},
+        {"store": store, "static_dir": static_dir},
     )
     server = ThreadingHTTPServer((args.bind, args.port), handler)
     print(f"testing-rack listening on http://{args.bind}:{args.port}")

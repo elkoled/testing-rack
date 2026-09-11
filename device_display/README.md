@@ -58,8 +58,8 @@ magic. It does not stop tests or reboot anything.
 
 Reservations are associated by serial. The repository and deployed rack inventory
 use the same physical-position numbering as the screens: NUT001–NUT005 on top,
-NUT006–NUT010 on the bottom. Fixed Jenkins assignments remain attached to their
-serials at bottom positions 4 and 5.
+NUT006–NUT010 on the bottom. Fixed reservations are defined in the rack configuration and matched by serial;
+see the [dated assignment audit](../docs/rack-assignment-audit.md).
 
 ## Failure behavior and rollback
 
@@ -83,7 +83,6 @@ the rack PC if no devices need it. The original AGNOS broker is not modified.
 
 Tests cover the transformed broker loop's client priority and idle restoration,
 unknown-version refusal, stale/missing reservations, and USB speed/disconnect
-states. A live descriptor handoff and background restoration were checked on
-NUT009 without restarting its broker. Installed bundle hashes were compared
-across all ten devices. The initial installation preserved active stock broker
-PIDs; activation by reboot is a separate, explicitly authorized operation.
+states. Run them as part of `./tests.sh` from the repository root or with the
+focused command above. Live activation checks must respect the client-safety
+rules in the installation section.

@@ -70,6 +70,10 @@ def main():
             ],
             coverage_env,
         )
+        run(
+            "device-display",
+            [str(PY), "-m", "unittest", "discover", "-s", "device_display", "-p", "test_*.py"],
+        )
         run("coverage-combine", [str(PY), "-m", "coverage", "combine"])
         run("coverage", [str(PY), "-m", "coverage", "report", "--fail-under=80"])
         run(

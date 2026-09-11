@@ -59,13 +59,14 @@
       "device_type": "four",
       "serial": "ba3f5545",
       "ftdi_serial": "DK0CGFB6",
-      "gpu_power_switch": "upper_2"
+      "gpu_power_switch": "upper_2",
+      "reserved_by": "Jenkins"
     },
     {
       "name": "NUT009",
       "device_type": "four",
       "serial": "de2e7866",
-      "reserved_by": "Jenkins Compile",
+      "reserved_by": "Jenkins",
       "ftdi_serial": "DK0CGTCH",
       "gpu_power_switch": "upper_4"
     },
@@ -73,7 +74,7 @@
       "name": "NUT010",
       "device_type": "four",
       "serial": "95940f7f",
-      "reserved_by": "Jenkins stresstest",
+      "reserved_by": "Jenkins",
       "ftdi_serial": "DK0CFUGS",
       "gpu_power_switch": "upper_5"
     }
