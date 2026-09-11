@@ -185,9 +185,11 @@ class HttpApiTest(unittest.TestCase):
         )
 
     def test_maximum_reservation_and_limit_errors(self):
+        config = json.loads((ROOT / "config.json").read_text())
+        available = sum(not device.get("reserved_by") for device in config["devices"])
         body = {
             "name": "limit-test",
-            "count": 10,
+            "count": available,
         }
         status, _, response = self.request(
             "POST",
@@ -200,7 +202,7 @@ class HttpApiTest(unittest.TestCase):
         )
         self.assertEqual(status, 201)
         reservation = json.loads(response)
-        self.assertEqual(len(reservation["devices"]), 10)
+        self.assertEqual(len(reservation["devices"]), available)
         self.assertGreaterEqual(reservation["expires_at"] - time.time(), 1790)
         status, _, _ = self.request(
             "DELETE",

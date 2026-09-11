@@ -98,7 +98,7 @@ class Config:
         )
         for item in raw["devices"]:
             required_fields = {"name", "device_type", "serial"}
-            optional_fields = {"ftdi_serial", "gpu_power_switch"}
+            optional_fields = {"ftdi_serial", "gpu_power_switch", "reserved_by"}
             if (
                 not isinstance(item, dict)
                 or not required_fields.issubset(item)
@@ -380,12 +380,13 @@ class StateStore:
                     owners.get(item["name"]),
                     self._effective_health(item["name"], connection_health),
                 )
+                owner = item.get("reserved_by") or (lease["name"] if lease else None)
                 devices.append(
                     {
                         "name": item["name"],
                         "health": health,
-                        "state": "reserved" if lease else health,
-                        "owner": lease["name"] if lease else None,
+                        "state": "reserved" if owner else health,
+                        "owner": owner,
                     }
                 )
             return {
@@ -480,6 +481,7 @@ class StateStore:
                 d["name"]
                 for d in self.config.devices
                 if d["name"] not in occupied
+                and not d.get("reserved_by")
                 and self._effective_health(d["name"], connection_health) == "ready"
             ]
             ready.sort(key=lambda name: int(NAME_RE.fullmatch(name).group(1)))

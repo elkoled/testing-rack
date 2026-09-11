@@ -57,6 +57,18 @@ class StoreTest(unittest.TestCase):
     def reserve(self, count=1, key="abcdefghijklmnop"):
         return self.store.reserve("alex", count, key)
 
+    def test_permanent_reservation(self):
+        self.config.devices[0]["reserved_by"] = "Jenkins Compile"
+        self.clock.value += 24 * 60 * 60
+        self.store = StateStore(self.config, self.state, self.secret, self.clock)
+        device = self.store.public_state()["devices"][0]
+        self.assertEqual(device["state"], "reserved")
+        self.assertEqual(device["owner"], "Jenkins Compile")
+        with self.assertRaises(RackError) as caught:
+            self.store.reserve("alex", 1, "abcdefghijklmnop", ["NUT001"])
+        self.assertEqual(caught.exception.status, 409)
+        self.assertEqual(self.reserve(2)["devices"], ["NUT002", "NUT003"])
+
     def test_atomic_multi_device_reservation(self):
         result = self.reserve(3)
         self.assertEqual(result["devices"], ["NUT001", "NUT002", "NUT003"])
