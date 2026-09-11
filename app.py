@@ -708,45 +708,6 @@ class Handler(BaseHTTPRequestHandler):
             path = urlparse(self.path).path
             if path == "/api/state":
                 self._json(200, self.store.public_state())
-            elif path == "/api/agent":
-                self._json(
-                    200,
-                    {
-                        "purpose": "Reserve exclusive test-device access.",
-                        "openapi": "/openapi.json",
-                        "reserve": {
-                            "method": "POST",
-                            "path": "/api/reservations",
-                            "headers": {
-                                "Content-Type": "application/json",
-                                "Idempotency-Key": "reuse one unique value for every retry of the same reservation",
-                            },
-                            "json": {
-                                "name": "your name",
-                                "count": 1,
-                            },
-                        },
-                        "result": "Save token and run a command from access_commands.",
-                        "remote_command": (
-                            "Append a quoted command to an access_commands value, "
-                            "for example: <access_command> 'uname -a'. Standard input "
-                            "is streamed."
-                        ),
-                        "selection": "Use count for automatic selection or replace count with devices, for example: [\"NUT001\",\"NUT004\"].",
-                        "timeout": "The reservation releases after idle_timeout_minutes without gateway use. Active SSH sessions refresh it.",
-                        "limits": "Read max_devices and idle_timeout_minutes from GET /api/state.",
-                        "read": {
-                            "method": "GET",
-                            "path": "/api/reservation",
-                            "header": "Authorization: Bearer token from reservation",
-                        },
-                        "release": {
-                            "method": "DELETE",
-                            "path": "/api/reservation",
-                            "header": "Authorization: Bearer token from reservation",
-                        },
-                    },
-                )
             elif path == "/openapi.json":
                 self._file("openapi.json", "application/json; charset=utf-8")
             elif path == "/api/reservation":

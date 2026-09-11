@@ -34,9 +34,8 @@ def run_case(browser, url: str, scenario: str, init_script: str, viewport: str) 
         assert page.locator("#matrix .device").count() > 0
         assert page.locator("#count option").count() == 11
         assert page.locator("#rack-name").inner_text() == "chestnut_rack"
-        assert page.locator("#agent-help").inner_text() == (
-            "Clanker API: /api/agent"
-        )
+        assert page.locator("#agent-help a").count() == 1
+        assert page.locator('#agent-help a[href="/openapi.json"]').inner_text() == "OpenAPI"
         name = f"chrome-{scenario[:8]}-{viewport[:1]}-{uuid.uuid4().hex[:6]}"
         page.locator("#name").fill(name)
         page.locator("#matrix .device", has_text="NUT001").click()

@@ -134,10 +134,6 @@ async function load() {
   try {
     ui.state = await api("/api/state")
     setText("rack-name", ui.state.display_name)
-    setText(
-      "agent-help",
-      "Clanker API: /api/agent",
-    )
     document.title = ui.state.display_name
     $("offline").hidden = true
     render()

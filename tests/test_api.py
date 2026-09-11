@@ -109,26 +109,6 @@ class HttpApiTest(unittest.TestCase):
         ):
             self.assertIn(name, headers)
 
-    def test_agent_instructions_are_complete_and_abstract(self):
-        status, _, body = self.request("GET", "/api/agent")
-        self.assertEqual(status, 200)
-        instructions = json.loads(body)
-        self.assertEqual(instructions["openapi"], "/openapi.json")
-        self.assertEqual(instructions["reserve"]["method"], "POST")
-        self.assertEqual(instructions["reserve"]["json"]["count"], 1)
-        self.assertEqual(
-            set(instructions["reserve"]["json"]),
-            {"name", "count"},
-        )
-        self.assertIn("Idempotency-Key", instructions["reserve"]["headers"])
-        self.assertEqual(instructions["read"]["path"], "/api/reservation")
-        self.assertEqual(instructions["release"]["method"], "DELETE")
-        self.assertIn("Standard input is streamed", instructions["remote_command"])
-        text = body.decode()
-        self.assertNotIn("serial", text)
-        self.assertNotIn("ftdi", text.lower())
-        self.assertNotIn("gpu_power_switch", text)
-
     def test_openapi_describes_public_api_contract(self):
         status, headers, body = self.request("GET", "/openapi.json")
         self.assertEqual(status, 200)
@@ -141,7 +121,6 @@ class HttpApiTest(unittest.TestCase):
             set(document["paths"]),
             {
                 "/api/state",
-                "/api/agent",
                 "/api/reservations",
                 "/api/reservation",
                 "/healthz",

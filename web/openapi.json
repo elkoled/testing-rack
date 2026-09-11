@@ -3,7 +3,7 @@
   "info": {
     "title": "testing-rack API",
     "version": "1.0.0",
-    "description": "Reserve exclusive test devices and obtain SSH access commands. Use /api/agent for concise workflow guidance."
+    "description": "Reserve exclusive access to physical test devices. Use this website's origin as the API base URL.\n\n1. GET /api/state to inspect available devices, max_devices, and idle_timeout_minutes.\n2. POST /api/reservations with Content-Type: application/json, a unique Idempotency-Key, and {\"name\":\"your-name\",\"count\":1}. For exact selection, replace count with \"devices\":[\"NUT001\"].\n3. Save the returned token privately. Execute an access_commands entry as supplied; append a quoted command such as 'uname -a' for noninteractive SSH. Standard input is streamed.\n4. Resume with GET /api/reservation using Authorization: Bearer <token>.\n5. When finished, DELETE /api/reservation with the same authorization header. This releases all reserved devices and terminates active gateway sessions.\n\nActive SSH sessions refresh the idle deadline. API reads and an open browser page do not; detached work after SSH disconnects does not retain the reservation. Device availability does not establish that hardware is safe to flash or power-cycle."
   },
   "servers": [{"url": "/"}],
   "paths": {
@@ -16,20 +16,11 @@
         }
       }
     },
-    "/api/agent": {
-      "get": {
-        "operationId": "getAgentInstructions",
-        "summary": "Get concise instructions for agents",
-        "responses": {
-          "200": {"description": "Machine-readable reservation and SSH workflow", "content": {"application/json": {"schema": {"type": "object"}}}}
-        }
-      }
-    },
     "/api/reservations": {
       "post": {
         "operationId": "createReservation",
         "summary": "Reserve one or more devices",
-        "description": "Repeat a request with the same Idempotency-Key after an uncertain response. Reusing the key with different inputs is rejected.",
+        "description": "No account login is required. The name is a cooperative owner identity; only one live reservation per normalized, case-insensitive name is allowed. After an uncertain response, retry with the same Idempotency-Key and body while the reservation is active. Different inputs with an active key are rejected. After release or expiry, reusing the key can create a new reservation. For HTTP 409, inspect the error code and message and refresh availability before deciding whether to retry.",
         "parameters": [
           {
             "name": "Idempotency-Key",
@@ -66,6 +57,7 @@
       "get": {
         "operationId": "getReservation",
         "summary": "Read the reservation authorized by a capability token",
+        "description": "Resume with your saved token. Reading does not extend expiry. HTTP 403 means the token is invalid or expired; do not assume you still own the devices.",
         "security": [{"bearerAuth": []}],
         "responses": {
           "200": {"description": "Current reservation", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/Reservation"}}}},
@@ -75,6 +67,7 @@
       "delete": {
         "operationId": "releaseReservation",
         "summary": "Release all devices in the authorized reservation",
+        "description": "Release when finished. All devices in this reservation are released and active gateway sessions are terminated. HTTP 403 means the token is invalid or expired.",
         "security": [{"bearerAuth": []}],
         "responses": {
           "200": {"description": "Released devices", "content": {"application/json": {"schema": {"type": "object", "required": ["released"], "properties": {"released": {"type": "array", "items": {"$ref": "#/components/schemas/DeviceName"}}}}}}},
@@ -123,7 +116,7 @@
           "devices": {"type": "array", "items": {"$ref": "#/components/schemas/DeviceName"}},
           "expires_at": {"type": "number", "description": "Unix timestamp. Active SSH sessions refresh the idle deadline."},
           "access_commands": {"type": "array", "description": "Complete SSH commands. Run directly for an interactive terminal or append a quoted remote command for non-TTY agent use.", "items": {"type": "string"}},
-          "actions": {"type": "object", "additionalProperties": {"type": "array", "items": {"type": "string", "enum": ["gpu_power:on", "gpu_power:off", "ftdi:reset"]}}}
+          "actions": {"type": "object", "description": "Allowed hardware actions by device name. Append a listed action to that device's access command only when your task requires it; these actions operate real hardware.", "additionalProperties": {"type": "array", "items": {"type": "string", "enum": ["gpu_power:on", "gpu_power:off", "ftdi:reset"]}}}
         }
       },
       "RackState": {
