@@ -1,57 +1,40 @@
 # Rack assignment audit
 
-Observed on 2026-09-11 from `chestnut` (192.168.62.201).
+Physically verified on 2026-09-11 from `chestnut` (192.168.62.201). NUT names, comma serials and physical positions are unchanged. The previous power and FTDI mappings were incorrect.
 
-## Result
+Each GPU outlet was switched off separately while monitoring all ten devices. Exactly one supply dropped below 3 V; it returned above 8 V after restoration. Each FTDI was reset separately with the existing normal-reset helper; exactly one GPU changed USB device number and re-enumerated.
 
-All ten configured FTDI adapters were enumerated on the rack PC. All ten devices
-reported the expected hostname and kernel boot serial, matching their installed
-rack-display configuration. Every device reported one GPU at 5000 Mbps (5 Gbps).
-Device names, serials, physical positions, and power assignments agree between
-rack configuration, display inventory, installed displays, and the power helper.
+| Device | Comma serial | GPU outlet | FTDI serial |
+|---|---|---|---|
+| NUT001 | `557d5c3a` | upper_1 | `DK0CFV87` |
+| NUT002 | `d292bc85` | upper_2 | `DK0CGFB6` |
+| NUT003 | `528f306f` | upper_3 | `DK0CFPQE` |
+| NUT004 | `4117bfee` | lower_5 | `DK0CFZ4T` |
+| NUT005 | `d05bb90f` | upper_5 | `DK0CFUGS` |
+| NUT006 | `178e6b20` | lower_1 | `DK0CFVDW` |
+| NUT007 | `96035a74` | lower_2 | `DK0CG2LJ` |
+| NUT008 | `ba3f5545` | lower_3 | `DK0CFPB6` |
+| NUT009 | `de2e7866` | lower_4 | `DK0CFVLA` |
+| NUT010 | `95940f7f` | upper_4 | `DK0CGTCH` |
 
-| Device | Device serial | Configured FTDI (present) | Rack USB path | GPU outlet | Observed GPU serial |
-| --- | --- | --- | --- | --- | --- |
-| NUT001 | 557d5c3a | DK0CFVDW | 1-1.1 | lower_1 | b7169169 |
-| NUT002 | d292bc85 | DK0CG2LJ | 1-1.2 | lower_2 | a6ce0fd9 |
-| NUT003 | 528f306f | DK0CFPB6 | 1-1.3 | lower_3 | f9a70b65 |
-| NUT004 | 4117bfee | DK0CFVLA | 1-1.4.1 | lower_4 | f89015cd |
-| NUT005 | d05bb90f | DK0CFZ4T | 1-1.4.2 | lower_5 | 5849970b |
-| NUT006 | 178e6b20 | DK0CFV87 | 1-1.4.3 | upper_1 | b0785807 |
-| NUT007 | 96035a74 | DK0CFPQE | 1-1.4.4.2 | upper_3 | 738702d2 |
-| NUT008 | ba3f5545 | DK0CGFB6 | 1-1.4.4.1 | upper_2 | 7c3c93f8 |
-| NUT009 | de2e7866 | DK0CGTCH | 1-1.4.4.3 | upper_4 | 46abf125 |
-| NUT010 | 95940f7f | DK0CFUGS | 1-1.4.4.4 | upper_5 | 58c0b69f |
+Lower outlet 6 powers the bottom-row comma devices (NUT006–010). Upper outlet 6 powers the top-row comma devices (NUT001–005). Both were power-cycled; changed boot IDs confirmed all five affected devices in each row. GPU power and FTDI wiring must not be inferred from row position.
 
-NUT007 and NUT008 use upper outlets 3 and 2 respectively. Their FTDI USB paths
-also follow outlet order rather than physical position. Do not renumber these
-assignments based on enumeration order.
+The user explicitly authorized taking over the Jenkins devices for this audit. Active test processes on NUT009/010 were stopped. No kernels or firmware were flashed, and the rack PC was not rebooted.
 
-The deployed inventory reserves NUT008, NUT009, and NUT010 for Jenkins. The
-checkout was missing the NUT008 fixed reservation; it has been aligned with the
-observed configuration.
+Raw before/after supply, PCIe, USB identity and boot-ID evidence is retained on the rack PC in `~/rack-mapping-validation/mapping-result.json` and `NUT*.jsonl`. This audit proves the observed wiring and recovery of these individual actions, not long-term model recovery or crank-transient behavior.
 
-## Method and limits
+After deployment, all ten named GPU power controls and all ten named FTDI
+controls were checked again through `/opt/testing-rack/actions.py`; each
+operated only the named GPU. Both strips returned intermittent network errors
+during this pass; failed actions were retained in the audit logs and the
+remaining checks resumed after connectivity recovered.
 
-The scan read rack USB sysfs descriptors, the deployed inventory, and the power
-helper's mapping without executing the helper. It then read hostnames, kernel
-boot arguments, display configurations, and USB descriptors over SSH on each
-device. The initial pass used one connection at a time, ten devices, an eight-second
-per-device timeout, no automatic retries, and a 120-second overall limit.
+A later final-health check found NUT007's GPU absent with a USB link-enable
+error in the kernel log. One normal FTDI reset recovered SuperSpeed enumeration
+without rebooting the comma device. This recovery does not establish the cause
+of that USB failure.
 
-NUT010's shared SSH transport timed out. One separate direct SSH inspection using
-the existing setup credential succeeded within a 15-second limit. Its device and
-GPU identities were verified through that direct connection.
-
-This verifies adapter presence and agreement of recorded assignments. It does
-**not independently prove which GPU each FTDI reset wire controls**. The adapters
-are attached to the rack PC, while GPUs enumerate on the devices; those two USB
-inventories contain no common identity field proving the electrical pairing.
-The FTDI debug helper changes CBUS GPIO levels even when merely opened, so it was
-not invoked. No resets, power changes, flashing, or reservation changes were made.
-End-to-end reset-wire and power-outlet verification requires a separate,
-coordinated hardware test or physical inspection.
-
-This is a dated observation, not live health information. Operational inventory
-remains in [`config.json`](../config.json) and
-[`device_display/inventory.json`](../device_display/inventory.json).
+The rack-only keep-awake guard was installed and verified on all ten devices.
+With `DisablePowerDown` temporarily removed, both normal power-off requests and
+direct starts of `poweroff.target` were rejected; boot IDs stayed unchanged.
+The parameter was restored. See [deployment](deployment.md#keep-rack-devices-powered).

@@ -77,3 +77,17 @@ secret together when making backups.
 
 The optional screen integration has its own
 [installation and rollback instructions](../device_display/README.md).
+
+## Keep rack devices powered
+
+After installing a device's rack-display identity, run `deploy/keep-awake.sh`
+as root on that device. It persistently masks `power_monitor.service` and
+`poweroff.target` in `/etc/systemd/system`, outside openpilot and Params. Normal
+software power-off requests are rejected even if CI clears `DisablePowerDown`.
+Reboot remains available. The installer restores the root filesystem's original
+mount mode and leaves `/data/continue.sh` unchanged.
+
+Verify `systemctl is-enabled power_monitor.service poweroff.target` reports
+`masked`. Keep `DisablePowerDown` enabled too, so openpilot does not initiate its
+shutdown sequence. Reapply the guard after replacing the AGNOS image. Before
+repurposing a device outside the rack, remove these masks deliberately.
