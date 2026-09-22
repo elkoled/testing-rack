@@ -167,7 +167,13 @@ function show(result) {
     `${result.name} · ${result.devices.length} device${result.devices.length === 1 ? "" : "s"}`,
   )
   const actions = [...new Set(Object.values(result.actions || {}).flat())]
-  setText("command", result.access_commands.join("\n"))
+  // The selector is a remote command, so SSH needs -t for an interactive UI login.
+  setText(
+    "command",
+    result.access_commands
+      .map((command) => command.replace(/^ssh /, "ssh -t "))
+      .join("\n"),
+  )
   $("controls").hidden = actions.length === 0
   setText(
     "controls",

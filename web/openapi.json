@@ -115,7 +115,7 @@
           "name": {"type": "string"},
           "devices": {"type": "array", "items": {"$ref": "#/components/schemas/DeviceName"}},
           "expires_at": {"type": "number", "description": "Unix timestamp. Active SSH sessions refresh the idle deadline."},
-          "access_commands": {"type": "array", "description": "Complete SSH commands. Run directly for an interactive terminal or append a quoted remote command for non-TTY agent use.", "items": {"type": "string"}},
+          "access_commands": {"type": "array", "description": "Complete SSH commands without terminal allocation. Append a quoted remote command for non-TTY agent use, or add -t immediately after ssh for an interactive terminal with line editing and history. The web UI adds -t to its displayed and copied commands.", "items": {"type": "string"}},
           "actions": {"type": "object", "description": "Allowed hardware actions by device name. Append a listed action to that device's access command only when your task requires it; these actions operate real hardware.", "additionalProperties": {"type": "array", "items": {"type": "string", "enum": ["gpu_power:on", "gpu_power:off", "ftdi:reset"]}}}
         }
       },

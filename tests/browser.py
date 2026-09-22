@@ -59,7 +59,16 @@ def run_case(browser, url: str, scenario: str, init_script: str, viewport: str) 
         command = page.locator("#command").inner_text()
         commands = command.splitlines()
         assert len(commands) == 2
-        assert commands[0].startswith("ssh rack@chestnut ")
+        assert commands[0].startswith("ssh -t rack@chestnut ")
+        reservation = page.request.get(
+            url + "/api/reservation",
+            headers={"Authorization": "Bearer " + page.evaluate("ui.token")},
+        ).json()
+        assert commands == [
+            command.replace("ssh ", "ssh -t ", 1)
+            for command in reservation["access_commands"]
+        ]
+        assert all(command.startswith("ssh rack@chestnut ") for command in reservation["access_commands"])
         assert commands[0].endswith("-NUT001")
         assert commands[1].endswith("-NUT004")
         assert "min" not in page.locator("#reservation-title").inner_text()
@@ -149,8 +158,10 @@ def run_interleavings(browser, url: str) -> None:
     for page in (a, b):
         page.locator("#name").fill(name)
         page.locator("#count").select_option("1")
-    a.locator("#reserve").click(no_wait_after=True)
-    b.locator("#reserve").click(no_wait_after=True)
+    # Submit without waiting for pointer actionability: the storage event from
+    # the first tab can hide the second form before Playwright clicks it.
+    for page in (a, b):
+        page.locator("#reserve-form").dispatch_event("submit")
     a.locator("#reservation").wait_for(state="visible", timeout=10000)
     b.locator("#reservation").wait_for(state="visible", timeout=10000)
     assert a.locator("#command").inner_text() == b.locator("#command").inner_text()

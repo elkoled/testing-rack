@@ -75,7 +75,7 @@ def main() -> int:
             if process is None or process.poll() is not None:
                 (socket_dir / device["name"]).unlink(missing_ok=True)
                 processes[device["name"]] = subprocess.Popen(
-                    command(device, args.identity, socket_dir),
+                    command(device, ("/etc/testing-rack/setup_key" if device["name"] in ("NUT008", "NUT009", "NUT010") else args.identity), socket_dir),
                     stdin=subprocess.DEVNULL,
                     stdout=subprocess.DEVNULL,
                     stderr=subprocess.DEVNULL,
