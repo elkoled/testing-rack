@@ -12,7 +12,7 @@ for config in json.loads((root / 'inventory.json').read_text()):
   if config['name'] not in sys.argv[1:]:
     continue
   config['reservation_url'] = 'http://192.168.62.201:8766/reservations'
-  key = 'setup_key' if config['serial'] in ('de2e7866', '95940f7f') else 'device_key'
+  key = 'setup_key' if config['serial'] in ('ba3f5545', 'de2e7866', '95940f7f') else 'device_key'
   ssh = ['sudo', '-n', '-u', 'testing-rack', 'ssh', '-i', '/etc/testing-rack/' + key,
          '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=5', '-o', 'UserKnownHostsFile=/dev/null',
          '-o', 'StrictHostKeyChecking=no', 'comma@comma-' + config['serial']]

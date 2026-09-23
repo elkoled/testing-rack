@@ -47,6 +47,23 @@ The installer verifies the serial and stock broker version, copies the bundle,
 and installs `/etc/systemd/system/magic.service.d/90-rack-display.conf`.
 Rootfs is returned to its prior read-only mount state after writing the drop-in.
 
+From a checkout on Chestnut, install the reservation cache once (or update it),
+then deploy the requested screens. The rack service and device SSH keys must
+already be installed:
+
+```sh
+sudo install -d -m 0755 /opt/rack-display
+sudo install -m 0644 device_display/reservations.py /opt/rack-display/reservations.py
+sudo install -m 0644 device_display/rack-reservations.service /etc/systemd/system/rack-reservations.service
+sudo systemctl daemon-reload
+sudo systemctl enable --now rack-reservations.service
+sudo systemctl restart rack-reservations.service
+python3 device_display/deploy_from_rack.py NUT001 NUT002 NUT003 NUT004 NUT005 NUT006 NUT007 NUT008 NUT009 NUT010
+```
+
+Pass only the NUT names you intend to update. The script reports each device's
+activation status; `pending` means its active display client was left running.
+
 If openpilot or a display client is present, installation **does not restart
 magic**. Activation waits for its next normal start or a device reboot. Stopping
 openpilot alone does not activate an already running stock broker. Once the
