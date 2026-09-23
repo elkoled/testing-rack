@@ -58,8 +58,8 @@ magic. It does not stop tests or reboot anything.
 
 Reservations are associated by serial. The repository and deployed rack inventory
 use the same physical-position numbering as the screens: NUT001–NUT005 on top,
-NUT006–NUT010 on the bottom. Fixed reservations are defined in the rack configuration and matched by serial;
-see the [dated assignment audit](../docs/rack-assignment-audit.md).
+NUT006–NUT010 on the bottom. Fixed reservations are defined in the rack configuration and matched by serial.
+Verify the rack inventory before installation.
 
 ## Failure behavior and rollback
 

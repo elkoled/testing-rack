@@ -20,10 +20,8 @@ are treated as ready. SSH commands use the gateway in `config.json`.
 
 - [OpenAPI specification](web/openapi.json): reservation, SSH, expiry, and release workflow;
   also available through the website's **OpenAPI** link.
-- [Deployment](docs/deployment.md): configuration, credentials, services, and updates.
 - [Contributing](CONTRIBUTING.md): code layout and testing.
 - [Device displays](device_display/README.md): optional AGNOS idle screen integration.
-- [Rack assignment audit](docs/rack-assignment-audit.md): dated hardware observations.
 
 ## License
 
